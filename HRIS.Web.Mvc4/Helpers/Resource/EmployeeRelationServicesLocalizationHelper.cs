@@ -473,6 +473,8 @@ namespace Project.Web.Mvc4.Helpers.Resource
         public const string EmployeeLoanRequest = "EmployeeLoanRequest";
         public const string Salary = "Salary";
         public const string AccordingToLeavePaidSliceWhichOrderIs = "AccordingToLeavePaidSliceWhichOrderIs";
+        public const string TotalWeeklyDaysValueHaveDeletedAccordingToEmployeeAbsenceDays = "TotalWeeklyDaysValueHaveDeletedAccordingToEmployeeAbsenceDays";
+        public const string TotalWeeklyDaysValueHaveDeletedAccordingToEmployeeNonPaidLeaveDays = "TotalWeeklyDaysValueHaveDeletedAccordingToEmployeeNonPaidLeaveDays";
         public static string GetResource(string key)
         {
             var result = ServiceFactory.LocalizationService.GetResource(ResourceGroupName + "_" + key);
