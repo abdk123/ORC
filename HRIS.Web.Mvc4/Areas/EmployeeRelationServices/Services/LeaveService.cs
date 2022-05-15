@@ -437,63 +437,77 @@ namespace Project.Web.Mvc4.Areas.EmployeeRelationServices.Services
             TimeSpan stratTime, TimeSpan endTime, LeaveRequest leaveRequest, LeaveRequest leaveRequestBeforeUpdate = null)
         {
 
+            var shiftslist = employeeCard.AttendanceForm.WorkshopRecurrences.SelectMany(x => x.Workshop.NormalShifts.ToList()).ToList();
+            bool isValid = false;
+            foreach (var item in shiftslist)
+            {
+                isValid = true;
+                var fromTime = new DateTime(2000, 1, 1, leaveRequest.FromTime.Value.Hour, leaveRequest.FromTime.Value.Minute, leaveRequest.FromTime.Value.Second);
+                var toTime = new DateTime(2000, 1, 1, leaveRequest.ToTime.Value.Hour, leaveRequest.ToTime.Value.Minute, leaveRequest.ToTime.Value.Second);
+                leaveRequest.FromTime = fromTime;
+                leaveRequest.ToTime = toTime;
 
+                leaveRequest.FromDateTime = new DateTime(leaveRequest.StartDate.Year, leaveRequest.StartDate.Month,
+                    leaveRequest.StartDate.Day, leaveRequest.FromTime.Value.Hour, leaveRequest.FromTime.Value.Minute,
+                    leaveRequest.FromTime.Value.Second);
+
+                leaveRequest.ToDateTime = new DateTime(leaveRequest.EndDate.Year, leaveRequest.EndDate.Month,
+                leaveRequest.EndDate.Day, leaveRequest.ToTime.Value.Hour, leaveRequest.ToTime.Value.Minute,
+                leaveRequest.ToTime.Value.Second);
+
+                var entrytime = new DateTime(leaveRequest.FromDateTime.Value.Year, leaveRequest.FromDateTime.Value.Month,
+                        leaveRequest.FromDateTime.Value.Day, item.EntryTime.Hour, item.EntryTime.Minute,
+                        item.EntryTime.Second);
+                var exittime = new DateTime(leaveRequest.ToDateTime.Value.Year, leaveRequest.ToDateTime.Value.Month,
+                        leaveRequest.ToDateTime.Value.Day, item.ExitTime.Hour, item.ExitTime.Minute,
+                        item.ExitTime.Second);
+
+                if (leaveRequest.FromDateTime.Value < entrytime || leaveRequest.FromDateTime.Value > exittime)
+                {
+                    isValid = false;
+                }
+                else if (leaveRequest.ToDateTime.Value < entrytime || leaveRequest.ToDateTime.Value > exittime)
+                {
+                    isValid = false;
+                }
+
+                if (isValid)
+                    break;
+            }
+
+
+            //التأكد من عدم التقاطع بين وقتين
             if (leaveRequestBeforeUpdate != null)
             {
 
-                var workshopRecurrences = employeeCard.AttendanceForm.WorkshopRecurrences.ToList();
-                foreach (var item in workshopRecurrences)
-                {
-                    var normalshifts = item.Workshop.NormalShifts.ToList();
-                    foreach (var item2 in normalshifts)
-                    {
-                        var fromTime = new DateTime(2000, 1, 1, leaveRequest.FromTime.Value.Hour, leaveRequest.FromTime.Value.Minute, leaveRequest.FromTime.Value.Second);
-                        var toTime = new DateTime(2000, 1, 1, leaveRequest.ToTime.Value.Hour, leaveRequest.ToTime.Value.Minute, leaveRequest.ToTime.Value.Second);
-                        leaveRequest.FromTime = fromTime;
-                        leaveRequest.ToTime = toTime;
-
-                        leaveRequest.FromDateTime = new DateTime(leaveRequest.StartDate.Year, leaveRequest.StartDate.Month,
-                            leaveRequest.StartDate.Day, leaveRequest.FromTime.Value.Hour, leaveRequest.FromTime.Value.Minute,
-                            leaveRequest.FromTime.Value.Second);
-
-                        leaveRequest.ToDateTime = new DateTime(leaveRequest.EndDate.Year, leaveRequest.EndDate.Month,
-                        leaveRequest.EndDate.Day, leaveRequest.ToTime.Value.Hour, leaveRequest.ToTime.Value.Minute,
-                        leaveRequest.ToTime.Value.Second);
-                        if (leaveRequest.ToDateTime < leaveRequest.FromDateTime)
-                        {
-                            var dateswapFornull = new DateTime(leaveRequest.EndDate.Year, leaveRequest.EndDate.Month,
-                            leaveRequest.EndDate.Day, leaveRequest.ToTime.Value.Hour, leaveRequest.ToTime.Value.Minute,
-                            leaveRequest.ToTime.Value.Second);
-                            leaveRequest.ToDateTime = dateswapFornull.AddDays(1);
-                        }
-
-                        var entrytime = new DateTime(leaveRequest.FromDateTime.Value.Year, leaveRequest.FromDateTime.Value.Month,
-                                leaveRequest.FromDateTime.Value.Day, item2.EntryTime.Hour, item2.EntryTime.Minute,
-                                item2.EntryTime.Second);
-                        var exittime = new DateTime(leaveRequest.ToDateTime.Value.Year, leaveRequest.ToDateTime.Value.Month,
-                                leaveRequest.ToDateTime.Value.Day, item2.ExitTime.Hour, item2.ExitTime.Minute,
-                                item2.ExitTime.Second);
-                        if (item2.ExitTime < item2.EntryTime)
-                        {
-                            exittime = exittime.AddDays(1);
-                        }
-
-                        if (leaveRequest.FromDateTime.Value < entrytime || leaveRequest.FromDateTime.Value > exittime)
-                        {
-                            return false;
-                        }
-                        else if (leaveRequest.ToDateTime.Value < entrytime || leaveRequest.ToDateTime.Value > exittime)
-                        {
-                            return false;
-                        }
-
-
-                    }
-                }
-                //التأكد من عدم التقاطع بين وقتين
                 foreach (var item in employeeCard.LeaveRequests)
                 {
                     if (leaveRequestBeforeUpdate != item)
+                    {
+                        if (item.IsHourlyLeave)
+                        {
+                            if (leaveRequest.FromDateTime.Value >= item.FromDateTime.Value && leaveRequest.FromDateTime.Value <= item.ToDateTime.Value)
+                            {
+                                return false;
+                            }
+                            else if (leaveRequest.ToDateTime.Value >= item.FromDateTime.Value && leaveRequest.ToDateTime.Value <= item.ToDateTime.Value)
+                            {
+                                return false;
+                            }
+                            else if (leaveRequest.FromDateTime.Value <= item.FromDateTime.Value && leaveRequest.ToDateTime.Value >= item.ToDateTime.Value)
+                            {
+                                return false;
+                            }
+                        }
+                    }
+                }
+                return true;
+            }
+            else
+            {
+                foreach (var item in employeeCard.LeaveRequests)
+                {
+                    if (item.IsHourlyLeave)
                     {
                         if (leaveRequest.FromDateTime.Value >= item.FromDateTime.Value && leaveRequest.FromDateTime.Value <= item.ToDateTime.Value)
                         {
@@ -510,78 +524,8 @@ namespace Project.Web.Mvc4.Areas.EmployeeRelationServices.Services
                     }
                 }
                 return true;
-
-
             }
-            else
-            {
-                var workshopRecurrences = employeeCard.AttendanceForm.WorkshopRecurrences.ToList();
-                foreach (var item in workshopRecurrences)
-                {
-                    var normalshifts = item.Workshop.NormalShifts.ToList();
-                    foreach (var item2 in normalshifts)
-                    {
-                        var fromTime = new DateTime(2000, 1, 1, leaveRequest.FromTime.Value.Hour, leaveRequest.FromTime.Value.Minute, leaveRequest.FromTime.Value.Second);
-                        var toTime = new DateTime(2000, 1, 1, leaveRequest.ToTime.Value.Hour, leaveRequest.ToTime.Value.Minute, leaveRequest.ToTime.Value.Second);
-                        leaveRequest.FromTime = fromTime;
-                        leaveRequest.ToTime = toTime;
 
-                        leaveRequest.FromDateTime = new DateTime(leaveRequest.StartDate.Year, leaveRequest.StartDate.Month,
-                            leaveRequest.StartDate.Day, leaveRequest.FromTime.Value.Hour, leaveRequest.FromTime.Value.Minute,
-                            leaveRequest.FromTime.Value.Second);
-
-                        leaveRequest.ToDateTime = new DateTime(leaveRequest.EndDate.Year, leaveRequest.EndDate.Month,
-                        leaveRequest.EndDate.Day, leaveRequest.ToTime.Value.Hour, leaveRequest.ToTime.Value.Minute,
-                        leaveRequest.ToTime.Value.Second);
-                        if (leaveRequest.ToDateTime < leaveRequest.FromDateTime)
-                        {
-                            var dateswapFornull = new DateTime(leaveRequest.EndDate.Year, leaveRequest.EndDate.Month,
-                            leaveRequest.EndDate.Day, leaveRequest.ToTime.Value.Hour, leaveRequest.ToTime.Value.Minute,
-                            leaveRequest.ToTime.Value.Second);
-                            leaveRequest.ToDateTime = dateswapFornull.AddDays(1);
-                        }
-
-                        var entrytime = new DateTime(leaveRequest.FromDateTime.Value.Year, leaveRequest.FromDateTime.Value.Month,
-                                leaveRequest.FromDateTime.Value.Day, item2.EntryTime.Hour, item2.EntryTime.Minute,
-                                item2.EntryTime.Second);
-                        var exittime = new DateTime(leaveRequest.ToDateTime.Value.Year, leaveRequest.ToDateTime.Value.Month,
-                                leaveRequest.ToDateTime.Value.Day, item2.ExitTime.Hour, item2.ExitTime.Minute,
-                                item2.ExitTime.Second);
-                        if (item2.ExitTime < item2.EntryTime)
-                        {
-                            exittime = exittime.AddDays(1);
-                        }
-
-                        if (leaveRequest.FromDateTime.Value < entrytime || leaveRequest.FromDateTime.Value > exittime)
-                        {
-                            return false;
-                        }
-                        else if (leaveRequest.ToDateTime.Value < entrytime || leaveRequest.ToDateTime.Value > exittime)
-                        {
-                            return false;
-                        }
-
-
-                    }
-                }
-                //التأكد من عدم التقاطع بين وقتين
-                foreach (var item in employeeCard.LeaveRequests)
-                {
-                    if (leaveRequest.FromDateTime.Value >= item.FromDateTime.Value && leaveRequest.FromDateTime.Value <= item.ToDateTime.Value)
-                    {
-                        return false;
-                    }
-                    else if (leaveRequest.ToDateTime.Value >= item.FromDateTime.Value && leaveRequest.ToDateTime.Value <= item.ToDateTime.Value)
-                    {
-                        return false;
-                    }
-                    else if (leaveRequest.FromDateTime.Value <= item.FromDateTime.Value && leaveRequest.ToDateTime.Value >= item.ToDateTime.Value)
-                    {
-                        return false;
-                    }
-                }
-                return true;
-            }
         }
 
     }

@@ -15,6 +15,8 @@ namespace Project.Web.Mvc4.Helpers.Resource
 
         public const string ResourceGroupName = "EmployeeRelationServicesModule";
         public const string ExitInterview = "ExitInterview";
+        public const string MobileApplication = "MobileApplication";
+        public const string LeaveRequest = "LeaveRequest";
         public const string RequiredHours = "RequiredHours";
         public const string GenerateReports = "GenerateReports";
         public const string EmployeeTransfer = "EmployeeTransfer";

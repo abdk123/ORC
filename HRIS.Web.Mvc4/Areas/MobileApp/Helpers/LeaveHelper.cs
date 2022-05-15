@@ -87,7 +87,7 @@ namespace Project.Web.Mvc4.Areas.MobileApp.Helpers
                 return null;
             }
         }
-        public static void saveLeaveRequest(Employee employee, LeaveRequestViewModel employeeLeaveItem, int locale)
+        public static LeaveRequest saveLeaveRequest(Employee employee, LeaveRequestViewModel employeeLeaveItem, int locale)
         {
             var start = DateTime.Now;
             employeeLeaveItem.StartDate = new DateTime(employeeLeaveItem.StartDate.Year, employeeLeaveItem.StartDate.Month, employeeLeaveItem.StartDate.Day, 0, 0, 0);
@@ -348,6 +348,7 @@ namespace Project.Web.Mvc4.Areas.MobileApp.Helpers
 
             ServiceFactory.ORMService.SaveTransaction(new List<IAggregateRoot>() { notify }, UserExtensions.CurrentUser);
             new MobileApp.Helpers.PushNotification(title, body, notify.Receivers.FirstOrDefault().Receiver.FCMToken ?? "");
+            return leave;
         }
         public static void SavePSLeaveWorkflow(int workflowId, int leaveId, WorkflowStepStatus status, string note, User user, int locale)
         {

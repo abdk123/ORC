@@ -269,61 +269,7 @@ namespace Project.Web.Mvc4.Areas.EmployeeRelationServices.Models
                 return;
             }
 
-            #region Amer Edits 11-05-2022
-            //Amer Started Editing 11-05-2022
-            if (leaveRequest.IsHourlyLeave)
-            {
-                var workshopRecurrences = employeeCard.AttendanceForm.WorkshopRecurrences.ToList();
-                foreach (var item in workshopRecurrences)
-                {
-                    var normalshifts = item.Workshop.NormalShifts.ToList();
-                    foreach (var item2 in normalshifts)
-                    {
-                        var fromTime = new DateTime(2000, 1, 1, leaveRequest.FromTime.Value.Hour, leaveRequest.FromTime.Value.Minute, leaveRequest.FromTime.Value.Second);
-                        var toTime = new DateTime(2000, 1, 1, leaveRequest.ToTime.Value.Hour, leaveRequest.ToTime.Value.Minute, leaveRequest.ToTime.Value.Second);
-                        leaveRequest.FromTime = fromTime;
-                        leaveRequest.ToTime = toTime;
 
-                        leaveRequest.FromDateTime = new DateTime(leaveRequest.StartDate.Year, leaveRequest.StartDate.Month,
-                            leaveRequest.StartDate.Day, leaveRequest.FromTime.Value.Hour, leaveRequest.FromTime.Value.Minute,
-                            leaveRequest.FromTime.Value.Second);
-
-                        leaveRequest.ToDateTime = new DateTime(leaveRequest.EndDate.Year, leaveRequest.EndDate.Month,
-                        leaveRequest.EndDate.Day, leaveRequest.ToTime.Value.Hour, leaveRequest.ToTime.Value.Minute,
-                        leaveRequest.ToTime.Value.Second);
-
-                        var entrytime = new DateTime(leaveRequest.FromDateTime.Value.Year, leaveRequest.FromDateTime.Value.Month,
-                                leaveRequest.FromDateTime.Value.Day, item2.EntryTime.Hour, item2.EntryTime.Minute,
-                                item2.EntryTime.Second);
-                        var exittime = new DateTime(leaveRequest.ToDateTime.Value.Year, leaveRequest.ToDateTime.Value.Month,
-                                leaveRequest.ToDateTime.Value.Day, item2.ExitTime.Hour, item2.ExitTime.Minute,
-                                item2.ExitTime.Second);
-
-                        if (leaveRequest.FromDateTime.Value < entrytime || leaveRequest.FromDateTime.Value > exittime)
-                        {
-                            validationResults.Add(new ValidationResult()
-                            {
-                                Message = EmployeeRelationServicesLocalizationHelper.GetResource(EmployeeRelationServicesLocalizationHelper.LeaveHoursOutOfAttendanceTime),
-                                Property = typeof(LeaveRequest).GetProperty("FromTime")
-                            });
-                            return;
-                        }
-                        else if (leaveRequest.ToDateTime.Value < entrytime || leaveRequest.ToDateTime.Value > exittime)
-                        {
-                            validationResults.Add(new ValidationResult()
-                            {
-                                Message = EmployeeRelationServicesLocalizationHelper.GetResource(EmployeeRelationServicesLocalizationHelper.LeaveHoursOutOfAttendanceTime),
-                                Property = typeof(LeaveRequest).GetProperty("ToTime")
-                            });
-                            return;
-                        }
-
-
-                    }
-                }
-            }
-            //Amer Ended Editing 11-05-2022
-            #endregion
 
             double spentDaysBeforUpdate = 0;
 

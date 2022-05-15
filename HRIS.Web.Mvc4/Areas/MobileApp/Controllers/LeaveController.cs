@@ -14,16 +14,19 @@ using Project.Web.Mvc4.Areas.MobileApp.Helpers;
 using Project.Web.Mvc4.Controllers;
 using Project.Web.Mvc4.Helpers;
 using Project.Web.Mvc4.Helpers.DomainExtensions;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Web;
 using Souccar.Domain.Security;
 using Souccar.Domain.Workflow.Enums;
 using Souccar.Infrastructure.Core;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Web;
 using System.Web.Http;
+using HRIS.Validation.Specification.EmployeeRelationServices.Entities;
+using Souccar.Domain.Validation;
+using Project.Web.Mvc4.Extensions;
+using Project.Web.Mvc4.Helpers.Resource;
 
 namespace Project.Web.Mvc4.Areas.MobileApp.Controllers
 {
@@ -165,22 +168,103 @@ namespace Project.Web.Mvc4.Areas.MobileApp.Controllers
         [Route("~/api/leave/postRequest")]
         [System.Web.Http.HttpPost]
         [BasicAuthentication(RequireSsl = false)]
-        public IHttpActionResult postLeaveRequest(System.Net.Http.HttpRequestMessage request, LeaveRequestViewModel leave, string loc)
+        public IHttpActionResult postLeaveRequest(System.Net.Http.HttpRequestMessage request,string loc)
         {
             var locale = loc;
+            var httpRequest = HttpContext.Current.Request;
+
             BasicAuthenticationIdentity identity = AuthenticationHelper.ParseAuthorizationHeader(Request);
             var auth = AuthHelper.CheckAuth(Souccar.Domain.Security.AuthorizeType.Visible, "EmployeeLeaveRequest", identity);
             if (auth)
             {
                 try
                 {
+                    var leave = new LeaveRequestViewModel() {
+                        EmployeeId =int.Parse( httpRequest.Form["employeeId"]),
+                        PositionId = int.Parse(httpRequest.Form["positionId"]),
+                        FullName = httpRequest.Form["fullName"],
+                        PositionName = httpRequest.Form["positionName"],
+                        LeaveId = int.Parse(httpRequest.Form["leaveId"]),
+                        LeaveSettingId = int.Parse(httpRequest.Form["leaveSettingId"]),
+                        LeaveSettingName = httpRequest.Form["leaveSettingName"],
+                        StartDate =DateTime.Parse( httpRequest.Form["startDate"]),
+                        EndDate = DateTime.Parse(httpRequest.Form["endDate"]),
+                        IsHourlyLeave =bool.Parse( httpRequest.Form["isHourlyLeave"]),
+                        IsSummerDate = bool.Parse(httpRequest.Form["isSummerDate"]),
+                        FromTime = DateTime.Parse(httpRequest.Form["fromTime"]),
+                        ToTime = DateTime.Parse(httpRequest.Form["toTime"]),
+                        FromDateTime = DateTime.Parse(httpRequest.Form["fromDateTime"]),
+                        ToDateTime = DateTime.Parse(httpRequest.Form["toDateTime"]),
+                        SpentDays =double.Parse( httpRequest.Form["spentDays"]),
+                        LeaveReason = httpRequest.Form["leaveReason"],
+                        LeaveReasonId = int.Parse(httpRequest.Form["leaveReasonId"]),
+                        RequestDate = DateTime.Parse(httpRequest.Form["requestDate"]),
+                        Description = httpRequest.Form["description"],
+                        WorkflowItemId = int.Parse(httpRequest.Form["workflowItemId"]),
+                        PendingType =(WorkflowPendingType)int.Parse( httpRequest.Form["pendingType"]),
+                        Note = httpRequest.Form["note"],
+
+                    };
                     var emp = ServiceFactory.ORMService.All<Employee>().FirstOrDefault(x => x.Id == int.Parse(identity.Name));
+                    var user = emp.User();
                     var posistion = ServiceFactory.ORMService.All<AssigningEmployeeToPosition>().FirstOrDefault(x => x.Employee == emp);
                     leave.EmployeeId = emp.Id;
                     leave.FullName = emp.FullName;
                     leave.PositionId = posistion.Id;
                     leave.PositionName = posistion.Position.NameForDropdown;
-                    LeaveHelper.saveLeaveRequest(emp, leave, int.Parse(locale));
+                    var req = LeaveHelper.saveLeaveRequest(emp, leave, int.Parse(locale));
+                    var path = Directory.CreateDirectory(HttpContext.Current.Server.MapPath("~/Content/UploadedFiles/" + "HRIS.Domain.EmployeeRelationServices.Entities.LeaveAttachment" + "/" + "FilePath" ));
+                    // The Name of the Upload component is "files"
+                    var files = httpRequest.Files;
+                    if (httpRequest.Files != null)
+                    {
+                        foreach (string item in files)
+                        {
+                            // Some browsers send file names with full path.
+                            // We are only interested in the file name.
+                            var file = httpRequest.Files[item];
+                            var acceptExtensionList = ".rar,.zip,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.png,.txt,.pdf ,.tif ".Split(',');
+                            var fileExtension = Path.GetExtension(file.FileName);
+                            if (acceptExtensionList.All(x => fileExtension != null && x.ToLower() != fileExtension.ToLower()))
+                            {
+                                return BadRequest(string.Format("{0} {1}", GlobalResource.InvalidExtensionMessage, fileExtension));
+                            }
+
+                            if (file.ContentLength > 50000000)
+                            {
+                                return BadRequest(string.Format("{0} {1}", GlobalResource.InvalidFileSizeMessage, 50000000));
+                            }
+
+                            var fileName = Path.GetFileName(file.FileName);
+
+                            var physicalPath = Path.Combine(path.FullName, fileName);
+                            var name = GetUniqueFileName(physicalPath, file.ContentLength);
+                            var validPhysicalPath = Path.Combine(path.FullName, name);
+
+                            file.SaveAs(validPhysicalPath);
+                            LeaveAttachment LeaveAttachment = new LeaveAttachment();
+                            var leaveAttachmentSpecification = new LeaveAttachmentSpecification();
+                            LeaveAttachment = new LeaveAttachment()
+                            {
+                                Title = EmployeeRelationServicesLocalizationHelper.GetResource(EmployeeRelationServicesLocalizationHelper.MobileApplication, int.Parse(loc)),
+                                Description = EmployeeRelationServicesLocalizationHelper.GetResource(EmployeeRelationServicesLocalizationHelper.LeaveRequest,int.Parse(loc))+" - "+leave.StartDate.ToString()+ " _ "+ leave.EndDate.ToString(),
+                                FilePath = name,
+                                LeaveRequest = req,
+                                User = user
+                            };
+                            var validationResults = (List<ValidationResult>)ServiceFactory.ValidationService.Validate(LeaveAttachment, leaveAttachmentSpecification);
+                            if (validationResults.Any())
+                            {
+                                foreach (var error in validationResults)
+                                {
+
+                                    throw new Exception(error.Message);
+                                }
+                            }
+                            LeaveAttachment.Save();
+                        }
+                    }
+
                 }
                 catch (Exception e)
                 {
@@ -193,7 +277,14 @@ namespace Project.Web.Mvc4.Areas.MobileApp.Controllers
                 return Unauthorized();
             }
         }
-
+        private string GetUniqueFileName(string physicalPath, int fileSize)
+        {
+            var fileName = Path.GetFileName(physicalPath);
+            var extension = Path.GetExtension(physicalPath);
+            var directory = Path.GetDirectoryName(physicalPath);
+            fileName = string.Format("{0}_{1}_{2}_{3}", Guid.NewGuid().ToString(), fileSize, extension, fileName);
+            return fileName;
+        }
         [Route("~/api/leave/getPendingLeaveRequests")]
         [System.Web.Http.HttpGet]
         [BasicAuthentication(RequireSsl = false)]
