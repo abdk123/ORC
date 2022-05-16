@@ -22,7 +22,6 @@ namespace HRIS.Mapping.AttendanceSystem.RootEntities
             Map(x => x.FromDate).Nullable();
             Map(x => x.ToDate).Nullable();
             Map(x => x.OvertimeHoursPerDay);
-
             Map(x => x.TakeConsiderationHolidaysDeduction);
             Map(x => x.Note).Length(GlobalConstant.MultiLinesStringMaxLength);
 

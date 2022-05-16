@@ -36,6 +36,7 @@ namespace HRIS.Mapping.PayrollSystem.Entities
             //Map(x => x.AuditState);
             //Map(x => x.NegativeSalary);
 
+
             References(x => x.Month);
             References(x => x.PrimaryCard);
 

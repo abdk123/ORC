@@ -27,6 +27,7 @@ namespace HRIS.Mapping.AttendanceSystem.RootEntities
             Map(x => x.IsTransferedToPayroll);
             References(x => x.WorkflowItem).Nullable();
             References(x => x.Employee);
+
         }
     }
 }

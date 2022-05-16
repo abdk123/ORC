@@ -1,17 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Web;
 using HRIS.Domain.EmployeeRelationServices.Configurations;
 using HRIS.Domain.EmployeeRelationServices.Entities;
 using HRIS.Domain.EmployeeRelationServices.Enums;
-using HRIS.Domain.EmployeeRelationServices.Helpers;
-using HRIS.Domain.EmployeeRelationServices.Indexes;
 using HRIS.Domain.EmployeeRelationServices.RootEntities;
 using HRIS.Domain.Global.Enums;
-using HRIS.Domain.JobDescription.Entities;
 using HRIS.Domain.Personnel.RootEntities;
-using NHibernate.Criterion;
 using Souccar.Infrastructure.Core;
 using HRIS.Domain.AttendanceSystem.Configurations;
 using HRIS.Domain.AttendanceSystem.Entities;

@@ -9,8 +9,6 @@ using HRIS.Domain.PayrollSystem.Enums;
 using HRIS.Domain.PayrollSystem.RootEntities;
 using HRIS.Domain.Personnel.Enums;
 using HRIS.Domain.Personnel.RootEntities;
-using HRIS.Validation.MessageKeys;
-using Project.Web.Mvc4.Areas.EmployeeRelationServices.Services;
 using Souccar.Core.Utilities;
 using Souccar.Infrastructure.Core;
 using Souccar.Infrastructure.Extenstions;

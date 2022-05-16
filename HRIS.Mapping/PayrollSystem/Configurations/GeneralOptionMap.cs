@@ -33,7 +33,6 @@ namespace HRIS.Mapping.PayrollSystem.Configurations
             Map(x => x.TempSalary2);
             Map(x => x.TempSalary1);
 
-
             Map(x => x.TakingTheTotalWorkingHoursInTheFinancialCard);
             Map(x => x.MinimunOfNonAttendanceDaysToRemoveWeeklyHolidays);
             Map(x => x.MinimunOfNonPaidLeaveDaysToRemoveWeeklyHolidays);
@@ -52,7 +51,6 @@ namespace HRIS.Mapping.PayrollSystem.Configurations
             References(x => x.OvertimeBenefit);
             References(x => x.RecycledLeaveBenefit);
             References(x => x.TaxDeduction);
-
 
             References(x => x.LeaveDeduction);
             References(x => x.PenaltyDeduction);

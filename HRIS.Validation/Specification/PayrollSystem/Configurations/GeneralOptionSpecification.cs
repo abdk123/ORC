@@ -53,30 +53,37 @@ namespace HRIS.Validation.Specification.PayrollSystem.Configurations
                 .Required()
                 .Expect((generalOption, internalTravelMissionBenefit) => internalTravelMissionBenefit.IsTransient() == false, "")
                 .With(x => x.MessageKey = PreDefinedMessageKeysSpecExpress.GetFullKey(PreDefinedMessageKeysSpecExpress.Required));
+
             Check(x => x.ExternalTravelMissionBenefit, y => typeof(GeneralOption).GetProperty("ExternalTravelMissionBenefit").GetTitle())
                .Required()
                .Expect((generalOption, externalTravelMissionBenefit) => externalTravelMissionBenefit.IsTransient() == false, "")
                .With(x => x.MessageKey = PreDefinedMessageKeysSpecExpress.GetFullKey(PreDefinedMessageKeysSpecExpress.Required));
+
             Check(x => x.LeaveDeduction, y => typeof(GeneralOption).GetProperty("LeaveDeduction").GetTitle())
                 .Required()
                 .Expect((generalOption, leaveDeduction) => leaveDeduction.IsTransient() == false, "")
                 .With(x => x.MessageKey = PreDefinedMessageKeysSpecExpress.GetFullKey(PreDefinedMessageKeysSpecExpress.Required));
+
             Check(x => x.PenaltyDeduction, y => typeof(GeneralOption).GetProperty("PenaltyDeduction").GetTitle())
                 .Required()
                 .Expect((generalOption, penaltyDeduction) => penaltyDeduction.IsTransient() == false, "")
                 .With(x => x.MessageKey = PreDefinedMessageKeysSpecExpress.GetFullKey(PreDefinedMessageKeysSpecExpress.Required));
+
             Check(x => x.AbsenceDaysDeduction, y => typeof(GeneralOption).GetProperty("AbsenceDaysDeduction").GetTitle())
                 .Required()
                 .Expect((generalOption, absenceDaysDeduction) => absenceDaysDeduction.IsTransient() == false, "")
                 .With(x => x.MessageKey = PreDefinedMessageKeysSpecExpress.GetFullKey(PreDefinedMessageKeysSpecExpress.Required));
+
             Check(x => x.NonAttendanceDeduction, y => typeof(GeneralOption).GetProperty("NonAttendanceDeduction").GetTitle())
                 .Required()
                 .Expect((generalOption, nonAttendanceDeduction) => nonAttendanceDeduction.IsTransient() == false, "")
                 .With(x => x.MessageKey = PreDefinedMessageKeysSpecExpress.GetFullKey(PreDefinedMessageKeysSpecExpress.Required));
+
             Check(x => x.LatenessDeduction, y => typeof(GeneralOption).GetProperty("LatenessDeduction").GetTitle())
                 .Required()
                 .Expect((generalOption, latenessDeduction) => latenessDeduction.IsTransient() == false, "")
                 .With(x => x.MessageKey = PreDefinedMessageKeysSpecExpress.GetFullKey(PreDefinedMessageKeysSpecExpress.Required));
+
             Check(x => x.RewardBenefit, y => typeof(GeneralOption).GetProperty("RewardBenefit").GetTitle())
                 .Required()
                 .Expect((generalOption, rewardBenefit) => rewardBenefit.IsTransient() == false, "")

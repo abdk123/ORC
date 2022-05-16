@@ -47,8 +47,7 @@ namespace HRIS.Domain.AttendanceSystem.RootEntities
 
         [UserInterfaceParameter(IsNonEditable = true)]
         public virtual DateTime CreationDate { get; set; }
-
-
+        
 
         [UserInterfaceParameter(IsNonEditable = true)]
         public virtual bool IsTransferedToPayroll { get; set; }

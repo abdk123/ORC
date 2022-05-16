@@ -52,8 +52,6 @@ namespace HRIS.Domain.AttendanceSystem.RootEntities
 
         [UserInterfaceParameter(IsNonEditable = true)]
         public virtual DateTime CreationDate { get; set; }
-
-
-
+        
     }
 }

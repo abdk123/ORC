@@ -1110,6 +1110,4 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
         #endregion
 
     }
-
-
 }

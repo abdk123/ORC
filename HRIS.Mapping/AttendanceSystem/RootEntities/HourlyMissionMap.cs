@@ -8,7 +8,6 @@ namespace HRIS.Mapping.AttendanceSystem.RootEntities
     {
         public HourlyMissionMap()
         {
-
             #region Default
             DynamicUpdate();
             DynamicInsert();

@@ -1,9 +1,5 @@
 ﻿using FluentNHibernate.Mapping;
 using HRIS.Domain.PayrollSystem.RootEntities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace HRIS.Mapping.PayrollSystem.RootEntities
 {
@@ -18,7 +14,9 @@ namespace HRIS.Mapping.PayrollSystem.RootEntities
             Id(x => x.Id);
             Map(x => x.IsVertualDeleted);
             #endregion
+
             References(x => x.Employee);
+
             #region Finance Details
 
             Map(x => x.Salary);
