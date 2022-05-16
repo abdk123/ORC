@@ -21,6 +21,7 @@ using HRIS.Domain.PayrollSystem.Entities;
 using Souccar.Domain.DomainModel;
 using Project.Web.Mvc4.Areas.EmployeeRelationServices.Services;
 using Project.Web.Mvc4.Helpers.Resource;
+using HRIS.Domain.AttendanceSystem.Configurations;
 
 namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
 {
@@ -30,7 +31,13 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
 
         #region Employee Relation Services
 
-        public static List<PayrollSystemIntegrationDTO> GetLeaves(Employee employee, bool isAccepted, DateTime? fromDate = null, DateTime? toDate = null)
+        public static List<PayrollSystemIntegrationDTO> GetLeaves(Employee employee,
+            HRIS.Domain.PayrollSystem.Configurations.GeneralOption generalOption,
+            List<PublicHoliday> publicHolidays,
+            List<FixedHoliday> fixedHolidays,
+            List<ChangeableHoliday> changeableHolidays,
+            Dictionary<Employee, HRIS.Domain.AttendanceSystem.Configurations.AttendanceForm> forms,
+            bool isAccepted, DateTime? fromDate = null, DateTime? toDate = null)
         {
             // الاجازات
 
@@ -75,7 +82,8 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                             ids.Add(leaveRequest.Id);
                             double leaveSpentDays = fromDate.HasValue && toDate.HasValue &&
                                 (leaveRequest.StartDate < fromDate.Value || leaveRequest.EndDate > toDate.Value) ?
-                                GetSpentDaysBetweenTwoDates(leaveRequest, fromDate, toDate) : leaveRequest.SpentDays;
+                                GetSpentDaysBetweenTwoDates(leaveRequest, forms[employee], fromDate.Value, toDate.Value, publicHolidays, fixedHolidays, changeableHolidays)
+                                : leaveRequest.SpentDays;
                             totalLeaveSpentDays += leaveSpentDays;
                         }
                         if (leaveSetting.PaidSlices != null && leaveSetting.PaidSlices.Count > 0)
@@ -99,14 +107,16 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                                 result.Add(new PayrollSystemIntegrationDTO
                                 {
                                     Value = spentDaysValueForDeduction,
-                                    Formula = leaveSetting.DeductionCard != null && leaveSetting.DeductionCard.Id != 0 ? leaveSetting.DeductionCard.Formula : Formula.DaysOfPackageSalary,
+                                    Formula = leaveSetting.DeductionCard != null && leaveSetting.DeductionCard.Id != 0 ? leaveSetting.DeductionCard.Formula :
+                                              generalOption.LeaveDeduction != null ? generalOption.LeaveDeduction.Formula : Formula.DaysOfPackageSalary,
                                     ExtraValue = -extraValues,
                                     ExtraValueFormula = ExtraValueFormula.PercentageOfInitialValue,
                                     Repetition = 1,
                                     SourceId = ids,
                                     SourceType = 0,
                                     Note = leaveSetting.NameForDropdown + " " + EmployeeRelationServicesLocalizationHelper.GetResource(EmployeeRelationServicesLocalizationHelper.AccordingToLeavePaidSliceWhichOrderIs) + order,
-                                    DeductionCard = leaveSetting.DeductionCard != null && leaveSetting.DeductionCard.Id != 0 ? leaveSetting.DeductionCard : null
+                                    DeductionCard = leaveSetting.DeductionCard != null && leaveSetting.DeductionCard.Id != 0 ? leaveSetting.DeductionCard :
+                                              generalOption.LeaveDeduction != null ? generalOption.LeaveDeduction : null
                                 });
 
                             }
@@ -117,16 +127,57 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                             result.Add(new PayrollSystemIntegrationDTO
                             {
                                 Value = totalLeaveSpentDays,
-                                Formula = leaveSetting.DeductionCard != null && leaveSetting.DeductionCard.Id != 0 ? leaveSetting.DeductionCard.Formula : Formula.DaysOfPackageSalary,
+                                Formula = leaveSetting.DeductionCard != null && leaveSetting.DeductionCard.Id != 0 ? leaveSetting.DeductionCard.Formula :
+                                              generalOption.LeaveDeduction != null ? generalOption.LeaveDeduction.Formula : Formula.DaysOfPackageSalary,
                                 ExtraValue = -extraValues,
                                 ExtraValueFormula = ExtraValueFormula.PercentageOfInitialValue,
                                 Repetition = 1,
                                 SourceId = ids,
                                 SourceType = 0,
                                 Note = leaveSetting.NameForDropdown,
-                                DeductionCard = leaveSetting.DeductionCard != null && leaveSetting.DeductionCard.Id != 0 ? leaveSetting.DeductionCard : null
+                                DeductionCard = leaveSetting.DeductionCard != null && leaveSetting.DeductionCard.Id != 0 ? leaveSetting.DeductionCard :
+                                              generalOption.LeaveDeduction != null ? generalOption.LeaveDeduction : null
                             });
                         }
+                        if (leaveSetting.PaidPercentage == 0 && generalOption.MinimunOfNonPaidLeaveDaysToRemoveWeeklyHolidays > 0 &&
+                            forms[employee].RelyHolidaies)
+                        {
+                            ids = new List<int>();
+                            var holidayDaysCountToAddAsLeaveDeduction = 0;
+                            foreach (var leaveRequest in leavesRequested)
+                            {
+                                var lastDayOfLeave = leaveRequest.EndDate;
+                                var lastWeekDays = toDate > lastDayOfLeave ?
+                                    GetWeekDaysBetweenTwoDates(lastDayOfLeave, toDate.Value, publicHolidays) : new List<DateTime>();
+                                if (lastWeekDays.Count > 0)
+                                    foreach (var weekDay in lastWeekDays)
+                                    {
+                                        if ((weekDay.Date - leaveRequest.EndDate.Date).TotalDays < 7 &&
+                                            leaveRequest.SpentDays >= generalOption.MinimunOfNonPaidLeaveDaysToRemoveWeeklyHolidays)
+                                        {
+                                            holidayDaysCountToAddAsLeaveDeduction += 1;
+                                            ids.Add(leaveRequest.Id);
+                                        }
+                                    }
+                            }
+                            if (holidayDaysCountToAddAsLeaveDeduction > 0)
+                            {
+                                result.Add(new PayrollSystemIntegrationDTO
+                                {
+                                    Value = holidayDaysCountToAddAsLeaveDeduction,
+                                    Formula = leaveSetting.DeductionCard != null && leaveSetting.DeductionCard.Id != 0 ? leaveSetting.DeductionCard.Formula :
+                                              generalOption.LeaveDeduction != null ? generalOption.LeaveDeduction.Formula : Formula.DaysOfPackageSalary,
+                                    ExtraValue = 0,
+                                    ExtraValueFormula = ExtraValueFormula.PercentageOfInitialValue,
+                                    Repetition = 1,
+                                    SourceId = ids,
+                                    SourceType = 0,
+                                    Note = EmployeeRelationServicesLocalizationHelper.GetResource(
+                                    EmployeeRelationServicesLocalizationHelper.TotalWeeklyDaysValueHaveDeletedAccordingToEmployeeNonPaidLeaveDays)
+                                });
+                            }
+                        }
+
                     }
 
                 }
@@ -134,11 +185,33 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
 
             return result;
         }
-
-        private static double GetSpentDaysBetweenTwoDates(LeaveRequest leaveRequest, DateTime? fromDate, DateTime? toDate)
+        private static List<DateTime> GetWeekDaysBetweenTwoDates(DateTime lastDayOfLeave, DateTime toDate, List<PublicHoliday> publicHolidays)
         {
-            var spentDays = LeaveService.GetSpentDays(leaveRequest.StartDate >= fromDate.Value ? leaveRequest.StartDate : fromDate.Value,
-                leaveRequest.EndDate <= toDate.Value ? leaveRequest.EndDate : toDate.Value, leaveRequest.LeaveSetting.IsContinuous, leaveRequest.EmployeeCard.Employee);
+            try
+            {
+                IList<DateTime> dates = new List<DateTime>();
+                //maybe the last day of leave is weekly day so we want to remove it
+                var currentDay = lastDayOfLeave.Date.AddDays(1);
+                var diff = (toDate.Date - lastDayOfLeave.Date).TotalDays;
+                while (currentDay < toDate.Date)
+                {
+                    currentDay = currentDay.AddDays(1);
+                    if (publicHolidays.Any(x => x.DayOfWeek == currentDay.DayOfWeek))
+                        dates.Add(currentDay);
+                }
+                return dates.ToList();
+            }
+            catch (Exception ex)
+            {
+                return new List<DateTime>();
+            }
+        }
+
+        private static double GetSpentDaysBetweenTwoDates(LeaveRequest leaveRequest, AttendanceForm attendanceForm, DateTime fromDate, DateTime toDate,
+            List<PublicHoliday> publicHolidays, List<FixedHoliday> fixedHolidays, List<ChangeableHoliday> changableHolidays)
+        {
+            var spentDays = LeaveService.GetSpentDays(attendanceForm, leaveRequest.StartDate >= fromDate ? leaveRequest.StartDate : fromDate,
+                leaveRequest.EndDate <= toDate ? leaveRequest.EndDate : toDate, leaveRequest.LeaveSetting.IsContinuous, publicHolidays, fixedHolidays, changableHolidays);
             return spentDays;
         }
 
@@ -307,10 +380,15 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
         /// <param name="date"></param>
         /// <param name="isAccepted"></param>
         /// <returns></returns>
-        public static List<PayrollSystemIntegrationDTO> ImportFromAttendance(AttendanceType attendanceType, Employee employee, DateTime fromDate, DateTime toDate, bool isAccepted)
+        public static List<PayrollSystemIntegrationDTO> ImportFromAttendance(AttendanceType attendanceType,
+            Employee employee, DateTime fromDate, DateTime toDate, bool isAccepted,
+            HRIS.Domain.PayrollSystem.Configurations.GeneralOption generalOption,
+            List<PublicHoliday> publicHolidays,
+            Dictionary<Employee, HRIS.Domain.AttendanceSystem.Configurations.AttendanceForm> forms)
         {
             // الدوام الإضافي
 
+            var extraDays = 0;
             var attendanceRecord = ServiceFactory.ORMService.All<AttendanceRecord>().FirstOrDefault(x => x.FromDate == fromDate && x.ToDate == toDate && x.AttendanceMonthStatus == AttendanceMonthStatus.Locked);
             var payrollSystemIntegrationDtOs = new List<PayrollSystemIntegrationDTO>();
 
@@ -322,23 +400,57 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
 
                 if (attendanceWithoutAdjustment != null)
                 {
-                    var payrollSystemIntegrationDTO = GetDTOFromAttendanceWithoutAdjustment(attendanceWithoutAdjustment, attendanceType);
+                    var payrollSystemIntegrationDTO = GetDTOFromAttendanceWithoutAdjustment(attendanceWithoutAdjustment, attendanceType, toDate, generalOption, publicHolidays, forms, out extraDays);
                     if (payrollSystemIntegrationDTO != null && payrollSystemIntegrationDTO.Value > 0)
+                    {
                         payrollSystemIntegrationDtOs.Add(payrollSystemIntegrationDTO);
+                        //extra days meaning count of weekly holiday days must to remove from employee when he has minimum absense days in same week
+                        if (extraDays > 0)
+                        {
+                            payrollSystemIntegrationDtOs.Add(new PayrollSystemIntegrationDTO
+                            {
+                                Value = extraDays,
+                                Formula = payrollSystemIntegrationDTO.Formula,
+                                ExtraValue = payrollSystemIntegrationDTO.ExtraValue,
+                                ExtraValueFormula = payrollSystemIntegrationDTO.ExtraValueFormula,
+                                Repetition = 1,
+                                SourceId = new List<int>() { attendanceWithoutAdjustment.Id },
+                                Note = EmployeeRelationServicesLocalizationHelper.GetResource(
+                                EmployeeRelationServicesLocalizationHelper.TotalWeeklyDaysValueHaveDeletedAccordingToEmployeeAbsenceDays)
+                            });
+                        }
+                    }
                 }
 
                 if (attendanceMonthlyAdjustment != null)
                 {
-                    var payrollSystemIntegrationDTO = GetDTOFromAttendanceMonthlyAdjustment(attendanceMonthlyAdjustment, attendanceType);
+                    var payrollSystemIntegrationDTO = GetDTOFromAttendanceMonthlyAdjustment(attendanceMonthlyAdjustment, attendanceType, generalOption, publicHolidays, forms);
                     if (payrollSystemIntegrationDTO != null && payrollSystemIntegrationDTO.Value > 0)
                         payrollSystemIntegrationDtOs.Add(payrollSystemIntegrationDTO);
                 }
 
                 if (attendanceDailyAdjustment != null)
                 {
-                    var payrollSystemIntegrationDTO = GetDTOFromAttendanceDailyAdjustment(attendanceDailyAdjustment, attendanceType);
+                    var payrollSystemIntegrationDTO = GetDTOFromAttendanceDailyAdjustment(attendanceDailyAdjustment, attendanceType, toDate, generalOption, publicHolidays, forms, out extraDays);
                     if (payrollSystemIntegrationDTO != null && payrollSystemIntegrationDTO.Value > 0)
+                    {
                         payrollSystemIntegrationDtOs.Add(payrollSystemIntegrationDTO);
+                        //extra days meaning count of weekly holiday days must to remove from employee when he has minimum absense days in same week
+                        if (extraDays > 0)
+                        {
+                            payrollSystemIntegrationDtOs.Add(new PayrollSystemIntegrationDTO
+                            {
+                                Value = extraDays,
+                                Formula = payrollSystemIntegrationDTO.Formula,
+                                ExtraValue = payrollSystemIntegrationDTO.ExtraValue,
+                                ExtraValueFormula = payrollSystemIntegrationDTO.ExtraValueFormula,
+                                Repetition = 1,
+                                SourceId = new List<int>() { attendanceWithoutAdjustment.Id },
+                                Note = EmployeeRelationServicesLocalizationHelper.GetResource(
+                                EmployeeRelationServicesLocalizationHelper.TotalWeeklyDaysValueHaveDeletedAccordingToEmployeeAbsenceDays)
+                            });
+                        }
+                    }
                 }
             }
 
@@ -428,8 +540,14 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
 
             return null;
         }
-        private static PayrollSystemIntegrationDTO GetDTOFromAttendanceWithoutAdjustment(AttendanceWithoutAdjustment attendanceWithoutAdjustment, AttendanceType attendanceType)
+        private static PayrollSystemIntegrationDTO GetDTOFromAttendanceWithoutAdjustment(
+            AttendanceWithoutAdjustment attendanceWithoutAdjustment,
+            AttendanceType attendanceType, DateTime toDate,
+            HRIS.Domain.PayrollSystem.Configurations.GeneralOption generalOption,
+            List<PublicHoliday> publicHolidays,
+            Dictionary<Employee, HRIS.Domain.AttendanceSystem.Configurations.AttendanceForm> forms, out int extraDays)
         {
+            extraDays = 0;
             var payrollSystemIntegrationDTO = new PayrollSystemIntegrationDTO
             {
                 Value = 0,
@@ -445,7 +563,9 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                         if (attendanceWithoutAdjustment.FinalTotalOvertimeValue > 0)
                         {
                             payrollSystemIntegrationDTO.Value = attendanceWithoutAdjustment.FinalTotalOvertimeValue;
-                            payrollSystemIntegrationDTO.Formula = Formula.HoursOfSalary;
+                            payrollSystemIntegrationDTO.Formula = generalOption.OvertimeBenefit != null ? generalOption.OvertimeBenefit.Formula : Formula.HoursOfSalary;
+                            payrollSystemIntegrationDTO.ExtraValue = generalOption.OvertimeBenefit != null ? generalOption.OvertimeBenefit.ExtraValue : 0;
+                            payrollSystemIntegrationDTO.ExtraValueFormula = generalOption.OvertimeBenefit != null ? generalOption.OvertimeBenefit.ExtraValueFormula : ExtraValueFormula.None;
                         }
                         break;
                     }
@@ -453,8 +573,30 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                     {
                         if (attendanceWithoutAdjustment.TotalAbsenceDaysValue > 0)
                         {
+                            var absenceDaysCountToAddAsDeduction = 0;
+                            var absencesDays = new List<DateTime>();
+                            if (generalOption.MinimunOfNonAttendanceDaysToRemoveWeeklyHolidays > 0 &&
+                            forms[attendanceWithoutAdjustment.EmployeeAttendanceCard.Employee].RelyHolidaies)
+                            {
+                                foreach (var absence in attendanceWithoutAdjustment.AttendanceWithoutAdjustmentDetails.
+                                Where(x => x.ActualWorkValue <= 0 && !x.HasMission && !x.HasVacation && !x.IsOffDay && !x.IsHoliday))
+                                {
+                                    absencesDays.Add(absence.Date);
+                                }
+                                absencesDays = absencesDays.OrderBy(x => x.Date).ToList();
+                                var weeklyDays = GetWeekDaysBetweenTwoDates(absencesDays.FirstOrDefault(), toDate, publicHolidays);
+                                foreach (var weekDay in weeklyDays)
+                                {
+                                    var absenceDaysBeforeWeekDay = absencesDays.Where(x => x.Date < weekDay && (weekDay.Date - x.Date).TotalDays <= 7).ToList();
+                                    if (absenceDaysBeforeWeekDay.Count >= generalOption.MinimunOfNonAttendanceDaysToRemoveWeeklyHolidays)
+                                        absenceDaysCountToAddAsDeduction += 1;
+                                }
+                            }
+                            extraDays = absenceDaysCountToAddAsDeduction;
                             payrollSystemIntegrationDTO.Value = attendanceWithoutAdjustment.TotalAbsenceDaysValue;
-                            payrollSystemIntegrationDTO.Formula = Formula.DaysOfSalary;
+                            payrollSystemIntegrationDTO.Formula = generalOption.AbsenceDaysDeduction != null ? generalOption.AbsenceDaysDeduction.Formula : Formula.DaysOfPackageSalary;
+                            payrollSystemIntegrationDTO.ExtraValue = generalOption.AbsenceDaysDeduction != null ? generalOption.AbsenceDaysDeduction.ExtraValue : 0;
+                            payrollSystemIntegrationDTO.ExtraValueFormula = generalOption.AbsenceDaysDeduction != null ? generalOption.AbsenceDaysDeduction.ExtraValueFormula : ExtraValueFormula.None;
                         }
                         break;
                     }
@@ -463,7 +605,9 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                         if (attendanceWithoutAdjustment.FinalNonAttendanceTotalValue > 0)
                         {
                             payrollSystemIntegrationDTO.Value = attendanceWithoutAdjustment.FinalNonAttendanceTotalValue;
-                            payrollSystemIntegrationDTO.Formula = Formula.HoursOfSalary;
+                            payrollSystemIntegrationDTO.Formula = generalOption.NonAttendanceDeduction != null ? generalOption.NonAttendanceDeduction.Formula : Formula.HoursOfPackageSalary;
+                            payrollSystemIntegrationDTO.ExtraValue = generalOption.NonAttendanceDeduction != null ? generalOption.NonAttendanceDeduction.ExtraValue : 0;
+                            payrollSystemIntegrationDTO.ExtraValueFormula = generalOption.NonAttendanceDeduction != null ? generalOption.NonAttendanceDeduction.ExtraValueFormula : ExtraValueFormula.None;
                         }
                         break;
                     }
@@ -472,7 +616,9 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                         if (attendanceWithoutAdjustment.FinalLatenessTotalValue > 0)
                         {
                             payrollSystemIntegrationDTO.Value = attendanceWithoutAdjustment.FinalLatenessTotalValue;
-                            payrollSystemIntegrationDTO.Formula = Formula.HoursOfSalary;
+                            payrollSystemIntegrationDTO.Formula = generalOption.LatenessDeduction != null ? generalOption.LatenessDeduction.Formula : Formula.HoursOfPackageSalary;
+                            payrollSystemIntegrationDTO.ExtraValue = generalOption.LatenessDeduction != null ? generalOption.LatenessDeduction.ExtraValue : 0;
+                            payrollSystemIntegrationDTO.ExtraValueFormula = generalOption.LatenessDeduction != null ? generalOption.LatenessDeduction.ExtraValueFormula : ExtraValueFormula.None;
                         }
                         break;
                     }
@@ -480,7 +626,10 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
 
             return payrollSystemIntegrationDTO;
         }
-        private static PayrollSystemIntegrationDTO GetDTOFromAttendanceMonthlyAdjustment(AttendanceMonthlyAdjustment attendanceMonthlyAdjustment, AttendanceType attendanceType)
+        private static PayrollSystemIntegrationDTO GetDTOFromAttendanceMonthlyAdjustment(AttendanceMonthlyAdjustment attendanceMonthlyAdjustment, AttendanceType attendanceType,
+            HRIS.Domain.PayrollSystem.Configurations.GeneralOption generalOption,
+            List<PublicHoliday> publicHolidays,
+            Dictionary<Employee, HRIS.Domain.AttendanceSystem.Configurations.AttendanceForm> forms)
         {
             var payrollSystemIntegrationDTO = new PayrollSystemIntegrationDTO
             {
@@ -497,7 +646,9 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                         if (attendanceMonthlyAdjustment.FinalOvertimeValue > 0)
                         {
                             payrollSystemIntegrationDTO.Value = attendanceMonthlyAdjustment.FinalOvertimeValue;
-                            payrollSystemIntegrationDTO.Formula = Formula.HoursOfSalary;
+                            payrollSystemIntegrationDTO.Formula = generalOption.OvertimeBenefit != null ? generalOption.OvertimeBenefit.Formula : Formula.HoursOfSalary;
+                            payrollSystemIntegrationDTO.ExtraValue = generalOption.OvertimeBenefit != null ? generalOption.OvertimeBenefit.ExtraValue : 0;
+                            payrollSystemIntegrationDTO.ExtraValueFormula = generalOption.OvertimeBenefit != null ? generalOption.OvertimeBenefit.ExtraValueFormula : ExtraValueFormula.None;
                         }
                         break;
                     }
@@ -511,7 +662,9 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                         if (attendanceMonthlyAdjustment.FinalNonAttendanceValue > 0)
                         {
                             payrollSystemIntegrationDTO.Value = attendanceMonthlyAdjustment.FinalNonAttendanceValue;
-                            payrollSystemIntegrationDTO.Formula = Formula.HoursOfSalary;
+                            payrollSystemIntegrationDTO.Formula = generalOption.NonAttendanceDeduction != null ? generalOption.NonAttendanceDeduction.Formula : Formula.HoursOfPackageSalary;
+                            payrollSystemIntegrationDTO.ExtraValue = generalOption.NonAttendanceDeduction != null ? generalOption.NonAttendanceDeduction.ExtraValue : 0;
+                            payrollSystemIntegrationDTO.ExtraValueFormula = generalOption.NonAttendanceDeduction != null ? generalOption.NonAttendanceDeduction.ExtraValueFormula : ExtraValueFormula.None;
                         }
                         break;
                     }
@@ -524,8 +677,13 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
 
             return payrollSystemIntegrationDTO;
         }
-        private static PayrollSystemIntegrationDTO GetDTOFromAttendanceDailyAdjustment(AttendanceDailyAdjustment attendanceDailyAdjustment, AttendanceType attendanceType)
+        private static PayrollSystemIntegrationDTO GetDTOFromAttendanceDailyAdjustment(
+            AttendanceDailyAdjustment attendanceDailyAdjustment, AttendanceType attendanceType, DateTime toDate,
+            HRIS.Domain.PayrollSystem.Configurations.GeneralOption generalOption,
+            List<PublicHoliday> publicHolidays,
+            Dictionary<Employee, HRIS.Domain.AttendanceSystem.Configurations.AttendanceForm> forms, out int extraDays)
         {
+            extraDays = 0;
             var payrollSystemIntegrationDTO = new PayrollSystemIntegrationDTO
             {
                 Value = 0,
@@ -541,7 +699,9 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                         if (attendanceDailyAdjustment.FinalOvertimeValue > 0)
                         {
                             payrollSystemIntegrationDTO.Value = attendanceDailyAdjustment.FinalOvertimeValue;
-                            payrollSystemIntegrationDTO.Formula = Formula.HoursOfSalary;
+                            payrollSystemIntegrationDTO.Formula = generalOption.OvertimeBenefit != null ? generalOption.OvertimeBenefit.Formula : Formula.HoursOfSalary;
+                            payrollSystemIntegrationDTO.ExtraValue = generalOption.OvertimeBenefit != null ? generalOption.OvertimeBenefit.ExtraValue : 0;
+                            payrollSystemIntegrationDTO.ExtraValueFormula = generalOption.OvertimeBenefit != null ? generalOption.OvertimeBenefit.ExtraValueFormula : ExtraValueFormula.None;
                         }
                         break;
                     }
@@ -549,8 +709,34 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                     {
                         if (attendanceDailyAdjustment.TotalAbsenceDays > 0)
                         {
+                            var absenceDaysCountToAddAsDeduction = 0;
+                            var absencesDays = new List<DateTime>();
+                            if (generalOption.MinimunOfNonAttendanceDaysToRemoveWeeklyHolidays > 0 &&
+                            forms[attendanceDailyAdjustment.EmployeeAttendanceCard.Employee].RelyHolidaies)
+                            {
+                                foreach (var absence in attendanceDailyAdjustment.AttendanceDailyAdjustmentDetails.
+                                Where(x => x.DailyAdjustmentAttendanceStatus == DailyAdjustmentAttendanceStatus.Absence))
+                                {
+                                    absencesDays.Add(absence.Date);
+                                }
+                                absencesDays = absencesDays.OrderBy(x => x.Date).ToList();
+                                var weeklyDays = GetWeekDaysBetweenTwoDates(absencesDays.FirstOrDefault(), toDate, publicHolidays);
+                                foreach (var weekDay in weeklyDays)
+                                {
+                                    var absenceDaysBeforeWeekDay = absencesDays.Where(x => x.Date < weekDay && (weekDay.Date - x.Date).TotalDays <= 7).ToList();
+                                    if (absenceDaysBeforeWeekDay.Count >= generalOption.MinimunOfNonAttendanceDaysToRemoveWeeklyHolidays)
+                                        absenceDaysCountToAddAsDeduction += 1;
+                                }
+                            }
+                            extraDays = absenceDaysCountToAddAsDeduction;
                             payrollSystemIntegrationDTO.Value = attendanceDailyAdjustment.TotalAbsenceDays;
-                            payrollSystemIntegrationDTO.Formula = Formula.DaysOfSalary;
+                            payrollSystemIntegrationDTO.Formula = generalOption.AbsenceDaysDeduction != null ? generalOption.AbsenceDaysDeduction.Formula : Formula.DaysOfPackageSalary;
+                            payrollSystemIntegrationDTO.ExtraValue = generalOption.AbsenceDaysDeduction != null ? generalOption.AbsenceDaysDeduction.ExtraValue : 0;
+                            payrollSystemIntegrationDTO.ExtraValueFormula = generalOption.AbsenceDaysDeduction != null ? generalOption.AbsenceDaysDeduction.ExtraValueFormula : ExtraValueFormula.None;
+                            //payrollSystemIntegrationDTO.Note = absenceDaysCountToAddAsDeduction > 0 ?
+                            //    EmployeeRelationServicesLocalizationHelper.GetResource(
+                            //        EmployeeRelationServicesLocalizationHelper.TotalAbsenceDaysValueWithDeletedHolidayDaysWhichValueIs) + " " +
+                            //        absenceDaysCountToAddAsDeduction : "";
                         }
                         break;
                     }
@@ -559,7 +745,9 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                         if (attendanceDailyAdjustment.FinalNonAttendanceValue > 0)
                         {
                             payrollSystemIntegrationDTO.Value = attendanceDailyAdjustment.FinalNonAttendanceValue;
-                            payrollSystemIntegrationDTO.Formula = Formula.HoursOfSalary;
+                            payrollSystemIntegrationDTO.Formula = generalOption.NonAttendanceDeduction != null ? generalOption.NonAttendanceDeduction.Formula : Formula.HoursOfPackageSalary;
+                            payrollSystemIntegrationDTO.ExtraValue = generalOption.NonAttendanceDeduction != null ? generalOption.NonAttendanceDeduction.ExtraValue : 0;
+                            payrollSystemIntegrationDTO.ExtraValueFormula = generalOption.NonAttendanceDeduction != null ? generalOption.NonAttendanceDeduction.ExtraValueFormula : ExtraValueFormula.None;
                         }
                         break;
                     }
@@ -695,6 +883,228 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
 
 
 
+        }
+        private static double GetSpentDaysBetweenTwoDates(TravelMission travelMission, Employee employee, AttendanceForm attendanceForm, DateTime fromDate, DateTime toDate,
+            List<PublicHoliday> publicHolidays, List<FixedHoliday> fixedHolidays, List<ChangeableHoliday> changableHolidays)
+        {
+            var spentDays = LeaveService.GetSpentDays(attendanceForm, travelMission.FromDate >= fromDate ? travelMission.FromDate : fromDate,
+                travelMission.ToDate <= toDate ? travelMission.ToDate : toDate, false, publicHolidays, fixedHolidays, changableHolidays);
+            return spentDays;
+        }
+        public static double GetHolidayDays(Employee employee, AttendanceForm attendanceForm, DateTime startDate, DateTime endDate,
+            List<PublicHoliday> publicHolidays, List<FixedHoliday> fixedHolidays, List<ChangeableHoliday> changableHolidays, List<OvertimeOrder> overtimeOrders)
+        {
+            overtimeOrders = overtimeOrders.Where(x => x.TakeConsiderationHolidaysDeduction).ToList();
+            var recurrenceIndex = AttendanceSystem.Services.AttendanceService.GetRecurrenceIndexByDate(attendanceForm, startDate);
+            IList<WorkshopRecurrence> recurrences = attendanceForm != null ? attendanceForm.WorkshopRecurrences.OrderBy(x => x.RecurrenceOrder).ToList() : new List<WorkshopRecurrence>();
+            double spentDays = 0;
+            var relyHolidays = attendanceForm != null ? attendanceForm.RelyHolidaies : true;
+            while (DateTime.Parse(startDate.ToShortDateString()) <= DateTime.Parse(endDate.ToShortDateString()))
+            {
+                if (!overtimeOrders.Any(x => x.FromDate <= startDate && x.ToDate >= startDate))
+                {
+
+                    if (relyHolidays && (publicHolidays.Any(x => x.DayOfWeek == startDate.DayOfWeek) ||
+                         fixedHolidays.Any(x => x.StartDate <= startDate && x.EndDate >= startDate) ||
+                         changableHolidays.Any(x => x.StartDate <= startDate && x.EndDate >= startDate)))
+                    {
+                        spentDays++;
+                    }
+                    else if (recurrences[(int)recurrenceIndex].IsOff)
+                    {
+                        spentDays++;
+                    }
+                }
+                recurrenceIndex++;
+                startDate = startDate.AddDays(1);
+                if (recurrenceIndex >= recurrences.Count)
+                {
+                    recurrenceIndex = 0;
+                }
+            }
+            return spentDays;
+        }
+        public static PayrollSystemIntegrationDTO GetHolidaysDeduction(Employee employee,
+            HRIS.Domain.PayrollSystem.Configurations.GeneralOption generalOption,
+            List<PublicHoliday> publicHolidays,
+            List<FixedHoliday> fixedHolidays,
+            List<ChangeableHoliday> changeableHolidays,
+            Dictionary<Employee, HRIS.Domain.AttendanceSystem.Configurations.AttendanceForm> forms,
+            List<OvertimeOrder> overtimeOrders, DateTime fromDate, DateTime toDate)
+        {
+
+
+            if (employee != null)
+            {
+                double total = GetHolidayDays(employee, forms[employee], fromDate.Date, toDate.Date, publicHolidays, fixedHolidays, changeableHolidays, overtimeOrders);
+                if (total > 0)
+                    return new PayrollSystemIntegrationDTO
+                    {
+                        Value = total,
+                        Formula = generalOption.HolidayDeduction != null ? generalOption.HolidayDeduction.Formula : Formula.DaysOfPackageSalary,
+                        ExtraValue = generalOption.HolidayDeduction != null ? generalOption.HolidayDeduction.ExtraValue : -100,
+                        ExtraValueFormula = generalOption.HolidayDeduction != null ? generalOption.HolidayDeduction.ExtraValueFormula : ExtraValueFormula.PercentageOfInitialValue,
+                        Repetition = 1,
+                        SourceType = 0,
+                        DeductionCard = generalOption.HolidayDeduction
+                    };
+            }
+
+            return null;
+        }
+        public static PayrollSystemIntegrationDTO GetHourlyMissionsBenefit(Employee employee, List<HourlyMission> hourlyMissions,
+            HRIS.Domain.PayrollSystem.Configurations.GeneralOption generalOption)
+        {
+
+            var financialCard = employee?.EmployeeCard?.FinancialCard;
+            if (financialCard != null && hourlyMissions.Any() && (generalOption.HourlyMissionValue > 0 || financialCard.HourlyMissionValue > 0))
+            {
+                var missionValue = financialCard.HourlyMissionValue > 0 ? financialCard.HourlyMissionValue : generalOption.HourlyMissionValue;
+                var ids = new List<int>();
+                double total = 0;
+                List<HourlyMission> missions = hourlyMissions.Where(x => x.Employee.Id == employee.Id).ToList();
+                foreach (var mission in missions)
+                {
+                    ids.Add(mission.Id);
+                    total += (mission.EndDateTime - mission.StartDateTime).TotalHours;
+                }
+                if (total > 0)
+                    return new PayrollSystemIntegrationDTO
+                    {
+                        Value = total * missionValue,
+                        Formula = generalOption.HourlyMissionBenefit != null ? generalOption.HourlyMissionBenefit.Formula : Formula.HoursOfPackageSalary,
+                        ExtraValue = generalOption.HourlyMissionBenefit != null ? generalOption.HourlyMissionBenefit.ExtraValue : 0,
+                        ExtraValueFormula = generalOption.HourlyMissionBenefit != null ? generalOption.HourlyMissionBenefit.ExtraValueFormula : ExtraValueFormula.None,
+                        Repetition = 1,
+                        SourceId = ids,
+                        SourceType = 0
+                    };
+            }
+
+            return null;
+        }
+        public static PayrollSystemIntegrationDTO GetInternalTravelMissionsBenefit(Employee employee, List<TravelMission> missions,
+            HRIS.Domain.PayrollSystem.Configurations.GeneralOption generalOption)
+        {
+            var financialCard = employee?.EmployeeCard?.FinancialCard;
+            if (financialCard != null && missions.Any() && (generalOption.InternalTravelMissionValue > 0 || financialCard.InternalTravelMissionValue > 0))
+            {
+                var missionValue = financialCard.InternalTravelMissionValue > 0 ? financialCard.InternalTravelMissionValue : generalOption.InternalTravelMissionValue;
+                var ids = new List<int>();
+                double total = 0;
+                foreach (var mission in missions)
+                {
+                    double spentDays = (mission.ToDate.Date - mission.FromDate.Date).TotalDays + 1;
+                    ids.Add(mission.Id);
+                    total += spentDays;
+                }
+                if (total > 0)
+                    return new PayrollSystemIntegrationDTO
+                    {
+                        Value = total * missionValue,
+                        Formula = generalOption.InternalTravelMissionBenefit != null ? generalOption.InternalTravelMissionBenefit.Formula : Formula.DaysOfPackageSalary,
+                        ExtraValue = generalOption.InternalTravelMissionBenefit != null ? generalOption.InternalTravelMissionBenefit.ExtraValue : 0,
+                        ExtraValueFormula = generalOption.InternalTravelMissionBenefit != null ? generalOption.InternalTravelMissionBenefit.ExtraValueFormula : ExtraValueFormula.None,
+                        Repetition = 1,
+                        SourceId = ids,
+                        SourceType = 0
+                    };
+            }
+
+            return null;
+        }
+        public static PayrollSystemIntegrationDTO GetExternalTravelMissionsBenefit(Employee employee, List<TravelMission> missions,
+            HRIS.Domain.PayrollSystem.Configurations.GeneralOption generalOption)
+        {
+            var financialCard = employee?.EmployeeCard?.FinancialCard;
+            if (financialCard != null && missions.Any() && (generalOption.ExternalTravelMissionValue > 0 || financialCard.ExternalTravelMissionValue > 0))
+            {
+                var result = new PayrollSystemIntegrationDTO();
+                var missionValue = financialCard.ExternalTravelMissionValue > 0 ? financialCard.ExternalTravelMissionValue : generalOption.ExternalTravelMissionValue;
+                var ids = new List<int>();
+                double total = 0;
+                foreach (var mission in missions)
+                {
+                    double spentDays = (mission.ToDate.Date - mission.FromDate.Date).TotalDays + 1;
+                    ids.Add(mission.Id);
+                    total += spentDays;
+                }
+                if (total > 0)
+                    return new PayrollSystemIntegrationDTO
+                    {
+                        Value = total * missionValue,
+                        Formula = generalOption.ExternalTravelMissionBenefit != null ? generalOption.ExternalTravelMissionBenefit.Formula : Formula.DaysOfPackageSalary,
+                        ExtraValue = generalOption.ExternalTravelMissionBenefit != null ? generalOption.ExternalTravelMissionBenefit.ExtraValue : 0,
+                        ExtraValueFormula = generalOption.ExternalTravelMissionBenefit != null ? generalOption.ExternalTravelMissionBenefit.ExtraValueFormula : ExtraValueFormula.None,
+                        Repetition = 1,
+                        SourceId = ids,
+                        SourceType = 0
+                    };
+            }
+
+            return null;
+        }
+        public static PayrollSystemIntegrationDTO GetHourlyMissionsDeduction(Employee employee, List<HourlyMission> hourlyMissions,
+            HRIS.Domain.PayrollSystem.Configurations.GeneralOption generalOption)
+        {
+            if (employee != null && hourlyMissions.Any())
+            {
+                var ids = new List<int>();
+                double total = 0;
+                foreach (var mission in hourlyMissions)
+                {
+                    ids.Add(mission.Id);
+                    total += (mission.EndDateTime - mission.StartDateTime).TotalHours;
+                }
+                if (total > 0)
+                    return new PayrollSystemIntegrationDTO
+                    {
+                        Value = total,
+                        Formula = generalOption.HourlyMissionDeduction != null ? generalOption.HourlyMissionDeduction.Formula : Formula.DaysOfPackageSalary,
+                        ExtraValue = generalOption.HourlyMissionDeduction != null ? generalOption.HourlyMissionDeduction.ExtraValue : -100,
+                        ExtraValueFormula = generalOption.HourlyMissionDeduction != null ? generalOption.HourlyMissionDeduction.ExtraValueFormula : ExtraValueFormula.PercentageOfInitialValue,
+                        Repetition = 1,
+                        SourceId = ids,
+                        SourceType = 0,
+                        DeductionCard = generalOption.HourlyMissionDeduction
+                    };
+            }
+
+            return null;
+        }
+        public static PayrollSystemIntegrationDTO GetDailyMissionsDeduction(Employee employee, List<TravelMission> missions,
+            HRIS.Domain.PayrollSystem.Configurations.GeneralOption generalOption,
+            List<PublicHoliday> publicHolidays,
+            List<FixedHoliday> fixedHolidays,
+            List<ChangeableHoliday> changeableHolidays,
+            Dictionary<Employee, HRIS.Domain.AttendanceSystem.Configurations.AttendanceForm> forms, DateTime fromDate, DateTime toDate)
+        {
+
+            if (employee != null && missions.Any())
+            {
+                var ids = new List<int>();
+                double total = 0;
+                foreach (var mission in missions)
+                {
+                    double spentDays = GetSpentDaysBetweenTwoDates(mission, employee, forms[employee], fromDate.Date, toDate.Date, publicHolidays, fixedHolidays, changeableHolidays);
+                    ids.Add(mission.Id);
+                    total += spentDays;
+                }
+                if (total > 0)
+                    return new PayrollSystemIntegrationDTO
+                    {
+                        Value = total,
+                        Formula = generalOption.TravelMissionDeduction != null ? generalOption.TravelMissionDeduction.Formula : Formula.DaysOfPackageSalary,
+                        ExtraValue = generalOption.TravelMissionDeduction != null ? generalOption.TravelMissionDeduction.ExtraValue : -100,
+                        ExtraValueFormula = generalOption.TravelMissionDeduction != null ? generalOption.TravelMissionDeduction.ExtraValueFormula : ExtraValueFormula.PercentageOfInitialValue,
+                        Repetition = 1,
+                        SourceId = ids,
+                        SourceType = 0,
+                        DeductionCard = generalOption.TravelMissionDeduction
+                    };
+            }
+
+            return null;
         }
 
         #endregion

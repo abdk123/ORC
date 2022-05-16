@@ -39,7 +39,7 @@ namespace HRIS.Domain.Personnel.RootEntities
     public class EmployeeCardBasePS : Entity, IAggregateRoot
     {
 
-     
+
         #region Basic Details
 
         [UserInterfaceParameter(IsHidden = true)]
@@ -49,7 +49,7 @@ namespace HRIS.Domain.Personnel.RootEntities
         [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.BasicDetails, Order = 1, IsReference = true, IsNonEditable = true, ReferenceReadUrl = "Personnel/Reference/FilterEmployee")]
         public virtual Employee Employee { get; set; }
 
-        
+
         [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.BasicDetails, Order = 3)]
 
         public virtual string EmployeeCode
@@ -60,7 +60,7 @@ namespace HRIS.Domain.Personnel.RootEntities
             }
 
         }
-        [UserInterfaceParameter(Order =2)]
+        [UserInterfaceParameter(Order = 2)]
         public virtual string FatherName
         {
             get
@@ -80,7 +80,7 @@ namespace HRIS.Domain.Personnel.RootEntities
                     Employee.Positions.FirstOrDefault(x => x.IsPrimary).Position.JobDescription == null ? string.Empty : Employee.Positions.FirstOrDefault(x => x.IsPrimary).Position.JobDescription.Name;
             }
         }
-        
+
         [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.BasicDetails, Order = 9)]
 
         public virtual string Position
@@ -90,8 +90,8 @@ namespace HRIS.Domain.Personnel.RootEntities
                 return Employee.Positions.FirstOrDefault(x => x.IsPrimary) == null ? string.Empty : Employee.Positions.FirstOrDefault(x => x.IsPrimary).Position.Code;
             }
         }
-        
-        [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.BasicDetails, Order =12)]
+
+        [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.BasicDetails, Order = 12)]
 
         public virtual string JobTitle
         {
@@ -131,7 +131,7 @@ namespace HRIS.Domain.Personnel.RootEntities
 
         [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.CardBasicDetails, Order = 21)]
         public virtual DateTime? StartWorkingDate { get; set; }
-       
+
         [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.CardBasicDetails, Order = 24)]
         public virtual DateTime ProbationPeriodEndDate { get; set; }
         [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.CardBasicDetails, Order = 21)]
@@ -145,7 +145,7 @@ namespace HRIS.Domain.Personnel.RootEntities
 
         [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.CardBasicDetails, Order = 33, IsNonEditable = true)]
         public virtual EmployeeCardStatus CardStatus { get; set; }
-    
+
         #endregion
 
         #region Employee Health Insurance
@@ -184,9 +184,13 @@ namespace HRIS.Domain.Personnel.RootEntities
         //public virtual float BenefitSalary { get; set; } // 1راتب الموظف الاحتياطي
 
         [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.FinanceDetails, Order = 75)]
-        public virtual float InsuranceSalary { get {
-                return FinancialCard != null ? FinancialCard.InsuranceSalary :0;
-            } } // راتب الموظف التأميني
+        public virtual float InsuranceSalary
+        {
+            get
+            {
+                return FinancialCard != null ? FinancialCard.InsuranceSalary : 0;
+            }
+        } // راتب الموظف التأميني
 
         //[UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.FinanceDetails, Order = 80)]
         //public virtual float TempSalary1 { get; set; } // راتب الموظف الاحتياطي2

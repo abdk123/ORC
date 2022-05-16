@@ -8,6 +8,7 @@ using Souccar.Core.CustomAttribute;
 using Souccar.Domain.DomainModel;
 using Souccar.Domain.Workflow.RootEntities;
 using HRIS.Domain.Global.Enums;
+using HRIS.Domain.AttendanceSystem.Enums;
 
 namespace HRIS.Domain.AttendanceSystem.RootEntities
 {
@@ -27,6 +28,8 @@ namespace HRIS.Domain.AttendanceSystem.RootEntities
 
         [UserInterfaceParameter(Order = 1, IsReference = true, ReferenceReadUrl = "AttendanceSystem/Home/FilterEmployee")]
         public virtual Employee Employee { get; set; } // الموظف صاحب مهمة السفر
+        [UserInterfaceParameter(Order = 8)]
+        public virtual TravelMissionType Type { get; set; }
         [UserInterfaceParameter(Order = 2)]
         public virtual string FatherName
         {
@@ -45,6 +48,12 @@ namespace HRIS.Domain.AttendanceSystem.RootEntities
         public virtual Status Status { get; set; }
 
         [UserInterfaceParameter(IsNonEditable = true)]
+        public virtual bool IsTransferedToPayroll { get; set; }
+
+        [UserInterfaceParameter(IsNonEditable = true)]
         public virtual DateTime CreationDate { get; set; }
+
+
+
     }
 }

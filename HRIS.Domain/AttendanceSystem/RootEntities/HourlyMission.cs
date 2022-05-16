@@ -39,7 +39,7 @@ namespace HRIS.Domain.AttendanceSystem.RootEntities
         public virtual string Note { get; set; }
         [UserInterfaceParameter(Order = 6, IsDateTime = true, IsHidden = true)]
         public virtual DateTime StartDateTime { get; set; }
-        [UserInterfaceParameter(Order =7, IsDateTime = true, IsHidden = true)]
+        [UserInterfaceParameter(Order = 7, IsDateTime = true, IsHidden = true)]
         public virtual DateTime EndDateTime { get; set; }
 
         [UserInterfaceParameter(Order = 8, IsHidden = true)]
@@ -49,7 +49,10 @@ namespace HRIS.Domain.AttendanceSystem.RootEntities
         public virtual DateTime CreationDate { get; set; }
 
 
-        [UserInterfaceParameter(Order = 8,IsNonEditable = true)]
+
+        [UserInterfaceParameter(IsNonEditable = true)]
+        public virtual bool IsTransferedToPayroll { get; set; }
+        [UserInterfaceParameter(Order = 8, IsNonEditable = true)]
         public virtual Status Status { get; set; }
     }
 }

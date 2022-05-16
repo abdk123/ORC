@@ -27,6 +27,10 @@ namespace HRIS.Mapping.PayrollSystem.Entities
             //Map(x => x.TotalDeducationsValue);
             //Map(x => x.TotalLoanPayments);
             //Map(x => x.TotalBenefitsValue);
+            Map(x => x.HourlyMissionValue);
+            Map(x => x.InternalTravelMissionValue);
+            Map(x => x.ExternalTravelMissionValue);
+            Map(x => x.TotalWorkingHours);
             Map(x => x.FinalMonthSalary);
             Map(x => x.ActualMonthSalary);
             //Map(x => x.AuditState);

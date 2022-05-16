@@ -23,6 +23,7 @@ namespace HRIS.Mapping.AttendanceSystem.RootEntities
             Map(x => x.Note).Length(GlobalConstant.MultiLinesStringMaxLength);
             Map(x => x.CreationDate);
             Map(x => x.Status);
+            Map(x => x.IsTransferedToPayroll);
             References(x => x.WorkflowItem).Nullable();
             References(x => x.Employee);
         }

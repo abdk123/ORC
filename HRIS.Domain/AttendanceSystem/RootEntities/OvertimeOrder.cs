@@ -40,6 +40,8 @@ namespace HRIS.Domain.AttendanceSystem.RootEntities
         public virtual Employee EmployeeManager { get; set; } // الموظف طالب التكليف وغالبا يكون مدير يتم التكليف بموافقته
 
         [UserInterfaceParameter(Order = 8)]
+        public virtual bool TakeConsiderationHolidaysDeduction { get; set; }
+        [UserInterfaceParameter(Order = 9)]
         public virtual string Note { get; set; } // ملاحظات
 
     }

@@ -32,6 +32,23 @@ namespace HRIS.Mapping.PayrollSystem.Configurations
             Map(x => x.InsuranceSalary);
             Map(x => x.TempSalary2);
             Map(x => x.TempSalary1);
+
+
+            Map(x => x.TakingTheTotalWorkingHoursInTheFinancialCard);
+            Map(x => x.MinimunOfNonAttendanceDaysToRemoveWeeklyHolidays);
+            Map(x => x.MinimunOfNonPaidLeaveDaysToRemoveWeeklyHolidays);
+            Map(x => x.HourlyMissionValue);
+            Map(x => x.InternalTravelMissionValue);
+            Map(x => x.ExternalTravelMissionValue);
+
+            References(x => x.HolidayDeduction);
+            References(x => x.ExternalTravelMissionBenefit);
+            References(x => x.InternalTravelMissionBenefit);
+
+            References(x => x.HourlyMissionDeduction);
+            References(x => x.TravelMissionDeduction);
+            References(x => x.HourlyMissionBenefit);
+
             References(x => x.OvertimeBenefit);
             References(x => x.RecycledLeaveBenefit);
             References(x => x.TaxDeduction);

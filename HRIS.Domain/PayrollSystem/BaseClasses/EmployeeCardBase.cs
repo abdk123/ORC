@@ -29,6 +29,19 @@ namespace HRIS.Domain.PayrollSystem.BaseClasses
         [UserInterfaceParameter(Order = 35)]
         public virtual float Threshold { get; set; } // عتبة الراتب
 
+        #region Attendance Details 
 
+
+        [UserInterfaceParameter(Order = 110, IsHidden = true)]
+        public virtual int TotalWorkingHours { get; set; }
+        [UserInterfaceParameter(Order = 120, IsHidden = true)]
+        public virtual double HourlyMissionValue { get; set; }
+        [UserInterfaceParameter(Order = 130, IsHidden = true)]
+        public virtual double InternalTravelMissionValue { get; set; }
+        [UserInterfaceParameter(Order = 140, IsHidden = true)]
+        public virtual double ExternalTravelMissionValue { get; set; }
+
+
+        #endregion
     }
 }

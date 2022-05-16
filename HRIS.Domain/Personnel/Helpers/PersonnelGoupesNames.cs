@@ -20,7 +20,7 @@ namespace HRIS.Domain.Personnel.Helpers
         public const string AttendanceDetails = "AttendanceDetails";
         public const string Eligibility = "Eligibility";
         public const string EmployeePensionPlan = "EmployeePensionPlan";
-        
+
         public const string Family = "Family";
         public const string Qualification = "Qualification";
 
@@ -50,11 +50,12 @@ namespace HRIS.Domain.Personnel.Helpers
         public const string Leaves = "Leaves";
         public const string SalaryPackages = "SalaryPackages";
         public const string AdvanceDetails = "AdvanceDetails";
+        public const string MissionDetails = "MissionDetails";
         public const string DeductionsDetails = "DeductionsDetails";
         public const string BenefitsDetails = "BenefitsDetails";
         public const string CourseDetails = "CourseDetails";
         public const string TrainingCenterDetails = "TrainingCenterDetails";
-        
+
 
 
         public static string GetResourceKey(string key)

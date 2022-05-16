@@ -19,11 +19,20 @@ using Project.Web.Mvc4.Extensions;
 using HRIS.Domain.PayrollSystem.Configurations;
 using Souccar.Domain.DomainModel;
 using Project.Web.Mvc4.Helpers.DomainExtensions;
+using HRIS.Domain.AttendanceSystem.Configurations;
 
 namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
 {
     public static class MonthService
     {
+        public static List<HourlyMission> HourlyMissions = new List<HourlyMission>();
+        public static List<TravelMission> TravelMissions = new List<TravelMission>();
+        public static List<PublicHoliday> PublicHolidays = new List<PublicHoliday>();
+        public static List<ChangeableHoliday> ChangeableHolidays = new List<ChangeableHoliday>();
+        public static List<FixedHoliday> FixedHolidays = new List<FixedHoliday>();
+        public static List<OvertimeOrder> OvertimeOrders = new List<OvertimeOrder>();
+        public static GeneralOption GeneralOptionObject = new GeneralOption();
+        public static Dictionary<Employee, AttendanceForm> DictionaryEmployeeAttendanceForm = new Dictionary<Employee, AttendanceForm>();
         enum ImportFrom
         {
             EmployeeRelationServices = 0,
@@ -76,6 +85,26 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
 
             var cardsWithNoMonthlyCards = primaryCardsWithNoMonthlyCards as IList<EmployeeCard> ??
                                           primaryCardsWithNoMonthlyCards.ToList();
+
+            GeneralOptionObject = ServiceFactory.ORMService.All<GeneralOption>().FirstOrDefault();
+            OvertimeOrders = ServiceFactory.ORMService.All<OvertimeOrder>().ToList();
+            PublicHolidays = ServiceFactory.ORMService.All<PublicHoliday>().ToList();
+            ChangeableHolidays = ServiceFactory.ORMService.All<ChangeableHoliday>().ToList();
+            FixedHolidays = ServiceFactory.ORMService.All<FixedHoliday>().ToList();
+            HourlyMissions = ServiceFactory.ORMService.All<HourlyMission>().
+                        Where(x => x.Status == HRIS.Domain.Global.Enums.Status.Approved && !x.IsTransferedToPayroll &&
+                        x.Date >= month.FromDate && x.Date <= month.ToDate)
+                        .ToList();
+            TravelMissions = ServiceFactory.ORMService.All<TravelMission>().
+                        Where(x => x.Status == HRIS.Domain.Global.Enums.Status.Approved && !x.IsTransferedToPayroll &&
+                        ((x.FromDate <= month.FromDate && x.ToDate >= month.ToDate) ||
+                         (x.FromDate <= month.ToDate && x.ToDate >= month.ToDate) ||
+                         (x.FromDate <= month.FromDate && x.ToDate >= month.FromDate) ||
+                         (x.FromDate >= month.FromDate && x.ToDate <= month.ToDate)))
+                        .ToList();
+            var employees = ServiceFactory.ORMService.All<Employee>().ToList().Where(x => cardsWithNoMonthlyCards.Any(y => y.Employee.Id == x.Id));
+
+            DictionaryEmployeeAttendanceForm = AttendanceSystem.Services.AttendanceService.GetAttendanceForms(employees.ToList());
             foreach (var primaryCardsWithNoMonthlyCard in cardsWithNoMonthlyCards)
             {
                 month.AddMonthlyCard(GenerateMonthlyCard(primaryCardsWithNoMonthlyCard, month));
@@ -87,7 +116,6 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
         }
         public static MonthlyCard GenerateMonthlyCard(EmployeeCard primaryCard, Month month)
         {
-            var generalOption = typeof(GeneralOption).GetAll<GeneralOption>().FirstOrDefault();
 
             //var familyBenefitOption = typeof(FamilyBenefitOption).GetAll<FamilyBenefitOption>().FirstOrDefault();
 
@@ -109,12 +137,12 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                 abruptionDate.Value < currentMonthEnd
                     ? (abruptionDate.Value - currentMonthEnd).TotalDays
                     : 0;
-            var workDays = generalOption.TotalMonthDays - (daysConflictWithHireDate + daysConflictWithAbruptionDate);
+            var workDays = GeneralOptionObject.TotalMonthDays - (daysConflictWithHireDate + daysConflictWithAbruptionDate);
             workDays = workDays < 0 ? 0 : workDays;
 
             var salary = workDays > 0
                 ? RoundUtility.PreDefinedRoundValue(PreDefinedRound.ToOne,
-                    primaryCard.FinancialCard.PackageSalary / generalOption.TotalMonthDays * workDays)
+                    primaryCard.FinancialCard.PackageSalary / GeneralOptionObject.TotalMonthDays * workDays)
                 : primaryCard.FinancialCard.PackageSalary;
 
             var monthlyCard = new MonthlyCard
@@ -129,6 +157,10 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                 PrimaryCard = primaryCard,
                 Threshold = primaryCard.FinancialCard.Threshold,
                 WorkDays = (int)workDays,
+                TotalWorkingHours = primaryCard.FinancialCard.TotalWorkingHours,
+                HourlyMissionValue = primaryCard.FinancialCard.HourlyMissionValue,
+                InternalTravelMissionValue = primaryCard.FinancialCard.InternalTravelMissionValue,
+                ExternalTravelMissionValue = primaryCard.FinancialCard.ExternalTravelMissionValue
                 //AuditState = AuditState.Audited
             };
 
@@ -293,19 +325,39 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
             if (month.ImportFromEmployeeRelation)
             {
                 var rewards = PayrollIntegrationService.GetRewards(primaryCard.Employee, false);
-                AddBenefit(rewards, monthlyCard, generalOption.RewardBenefit, generalOption, ImportFrom.EmployeeRelationServices);
+                AddBenefit(rewards, monthlyCard, GeneralOptionObject.RewardBenefit);
 
                 var recycledLeaves = PayrollIntegrationService.GetRecycledLeaves(primaryCard.Employee, false);
-                AddBenefit(recycledLeaves, monthlyCard, generalOption.RecycledLeaveBenefit, generalOption, ImportFrom.EmployeeRelationServices);
+                AddBenefit(recycledLeaves, monthlyCard, GeneralOptionObject.RecycledLeaveBenefit);
             }
             #endregion
 
             #region Import From Attendance
             if (month.ImportFromAttendance)
             {
+                var hourlyMission = PayrollIntegrationService.GetHourlyMissionsBenefit(primaryCard.Employee,
+                    HourlyMissions.Where(x => x.Employee == primaryCard.Employee).ToList(), GeneralOptionObject);
+                if (hourlyMission != null)
+                {
+                    AddBenefit(new List<PayrollSystemIntegrationDTO>() { hourlyMission }, monthlyCard, GeneralOptionObject.HourlyMissionBenefit);
+                }
+                var internalMission = PayrollIntegrationService.GetInternalTravelMissionsBenefit(primaryCard.Employee,
+                    TravelMissions.Where(x => x.Employee == primaryCard.Employee &&
+                        x.Type == HRIS.Domain.AttendanceSystem.Enums.TravelMissionType.Internal).ToList(), GeneralOptionObject);
+                if (internalMission != null)
+                {
+                    AddBenefit(new List<PayrollSystemIntegrationDTO>() { internalMission }, monthlyCard, GeneralOptionObject.InternalTravelMissionBenefit);
+                }
+                var externalMission = PayrollIntegrationService.GetExternalTravelMissionsBenefit(primaryCard.Employee,
+                    TravelMissions.Where(x => x.Employee == primaryCard.Employee &&
+                        x.Type == HRIS.Domain.AttendanceSystem.Enums.TravelMissionType.External).ToList(), GeneralOptionObject);
+                if (externalMission != null)
+                {
+                    AddBenefit(new List<PayrollSystemIntegrationDTO>() { externalMission }, monthlyCard, GeneralOptionObject.ExternalTravelMissionBenefit);
+                }
                 var overtime = PayrollIntegrationService.ImportFromAttendance(PayrollIntegrationService.AttendanceType.Overtime,
-                    primaryCard.Employee, month.FromDate.Date, month.ToDate.Date, false);
-                AddBenefit(overtime, monthlyCard, generalOption.OvertimeBenefit, generalOption, ImportFrom.Attendance);
+                    primaryCard.Employee, month.FromDate.Date, month.ToDate.Date, false, GeneralOptionObject, PublicHolidays, DictionaryEmployeeAttendanceForm);
+                AddBenefit(overtime, monthlyCard, GeneralOptionObject.OvertimeBenefit);
             }
             #endregion
 
@@ -441,33 +493,54 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
             #region Import From Employee Relation
             if (month.ImportFromEmployeeRelation)
             {
-                var leaves = PayrollIntegrationService.GetLeaves(primaryCard.Employee, false, month.FromDate, month.ToDate);
+                var leaves = PayrollIntegrationService.GetLeaves(primaryCard.Employee, GeneralOptionObject,
+                    PublicHolidays, FixedHolidays, ChangeableHolidays, DictionaryEmployeeAttendanceForm,
+                    false, month.FromDate, month.ToDate);
                 if (leaves.Count() != 0)
                 {
-                    AddDeduction(leaves, monthlyCard, generalOption.LeaveDeduction, generalOption,
-                        ImportFrom.EmployeeRelationServices, true);
+                    AddDeduction(leaves, monthlyCard, GeneralOptionObject.LeaveDeduction, true);
                 }
 
                 var penalties = PayrollIntegrationService.GetPenalties(primaryCard.Employee, false);
-                AddDeduction(penalties, monthlyCard, generalOption.PenaltyDeduction, generalOption,
-                    ImportFrom.EmployeeRelationServices);
+                AddDeduction(penalties, monthlyCard, GeneralOptionObject.PenaltyDeduction);
             }
             #endregion
 
             #region Import From Attendance
             if (month.ImportFromAttendance)
             {
+                var hourlyMission = PayrollIntegrationService.GetHourlyMissionsDeduction(primaryCard.Employee,
+                    HourlyMissions.Where(x => x.Employee == primaryCard.Employee).ToList(), GeneralOptionObject);
+                if (hourlyMission != null)
+                {
+                    AddDeduction(new List<PayrollSystemIntegrationDTO>() { hourlyMission }, monthlyCard, GeneralOptionObject.HourlyMissionDeduction);
+                }
+                var dailyMission = PayrollIntegrationService.GetDailyMissionsDeduction(primaryCard.Employee,
+                    TravelMissions.Where(x => x.Employee == primaryCard.Employee).ToList(), GeneralOptionObject,
+                    PublicHolidays, FixedHolidays, ChangeableHolidays, DictionaryEmployeeAttendanceForm, month.FromDate, month.ToDate);
+                if (dailyMission != null)
+                {
+                    AddDeduction(new List<PayrollSystemIntegrationDTO>() { dailyMission }, monthlyCard, GeneralOptionObject.TravelMissionDeduction);
+                }
+                var overtimeOrdersEmployee = OvertimeOrders.Where(x => x.Employee?.Id == primaryCard.Employee?.Id).ToList();
+                var holiday = PayrollIntegrationService.GetHolidaysDeduction(primaryCard.Employee, GeneralOptionObject,
+                    PublicHolidays, FixedHolidays, ChangeableHolidays, DictionaryEmployeeAttendanceForm,
+                    overtimeOrdersEmployee, month.FromDate, month.ToDate);
+                if (holiday != null)
+                {
+                    AddDeduction(new List<PayrollSystemIntegrationDTO>() { holiday }, monthlyCard, GeneralOptionObject.HolidayDeduction);
+                }
                 var absences = PayrollIntegrationService.ImportFromAttendance(PayrollIntegrationService.AttendanceType.Absence,
-                    primaryCard.Employee, month.FromDate.Date, month.ToDate.Date, false);
-                AddDeduction(absences, monthlyCard, generalOption.AbsenceDaysDeduction, generalOption, ImportFrom.Attendance);
+                    primaryCard.Employee, month.FromDate.Date, month.ToDate.Date, false, GeneralOptionObject, PublicHolidays, DictionaryEmployeeAttendanceForm);
+                AddDeduction(absences, monthlyCard, GeneralOptionObject.AbsenceDaysDeduction);
 
                 var nonAttendance = PayrollIntegrationService.ImportFromAttendance(PayrollIntegrationService.AttendanceType.NonAttendance,
-                    primaryCard.Employee, month.FromDate.Date, month.ToDate.Date, false);
-                AddDeduction(nonAttendance, monthlyCard, generalOption.NonAttendanceDeduction, generalOption, ImportFrom.Attendance);
+                    primaryCard.Employee, month.FromDate.Date, month.ToDate.Date, false, GeneralOptionObject, PublicHolidays, DictionaryEmployeeAttendanceForm);
+                AddDeduction(nonAttendance, monthlyCard, GeneralOptionObject.NonAttendanceDeduction);
 
                 var lateness = PayrollIntegrationService.ImportFromAttendance(PayrollIntegrationService.AttendanceType.Lateness,
-                    primaryCard.Employee, month.FromDate.Date, month.ToDate.Date, false);
-                AddDeduction(lateness, monthlyCard, generalOption.LatenessDeduction, generalOption, ImportFrom.Attendance);
+                    primaryCard.Employee, month.FromDate.Date, month.ToDate.Date, false, GeneralOptionObject, PublicHolidays, DictionaryEmployeeAttendanceForm);
+                AddDeduction(lateness, monthlyCard, GeneralOptionObject.LatenessDeduction);
 
             }
             #endregion
@@ -478,9 +551,9 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                         ((x.HasExpiryDate && x.ExpiryDate > month.FromDate.Date) || x.HasExpiryDate == false) &&
                         ((x.HasStartDate && x.StartDate < month.FromDate.Date) || x.HasStartDate == false));
 
-            if (generalOption.StoppingTaxByReserveMilitaryService && primaryCard.Employee.MilitaryStatus == MilitaryStatus.Reserve)
+            if (GeneralOptionObject.StoppingTaxByReserveMilitaryService && primaryCard.Employee.MilitaryStatus == MilitaryStatus.Reserve)
             {
-                primaryEmployeeDeductions = primaryEmployeeDeductions.Where(x => x.DeductionCard.Id != generalOption.TaxDeduction.Id);
+                primaryEmployeeDeductions = primaryEmployeeDeductions.Where(x => x.DeductionCard.Id != GeneralOptionObject.TaxDeduction.Id);
             }
 
             foreach (var primaryEmployeeDeduction in primaryEmployeeDeductions)
@@ -546,7 +619,7 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
             return monthlyCard;
         }
         private static void AddDeduction(IEnumerable<PayrollSystemIntegrationDTO> payrollSystemIntegrationDtos,
-            MonthlyCard monthlyCard, DeductionCard deductionCard, GeneralOption generalOption, ImportFrom importFrom, bool isLeaves = false)
+            MonthlyCard monthlyCard, DeductionCard deductionCard, bool isLeaves = false)
         {
             foreach (var integrationDetails in payrollSystemIntegrationDtos)
             {
@@ -630,7 +703,8 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                     ExtraValue = integrationDetails.ExtraValue,
                     ExtraValueFormula = integrationDetails.ExtraValueFormula,
                     Note = integrationDetails.Note,
-                    SourceId = integrationDetails.SourceId.FirstOrDefault()
+                    SourceId = integrationDetails.SourceId != null && integrationDetails.SourceId.Any() ?
+                       integrationDetails.SourceId.FirstOrDefault() : 0
                 });
                 if (isLeaves)
                     foreach (var sourceId in integrationDetails.SourceId)
@@ -644,7 +718,7 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
             }
         }
         private static void AddBenefit(IEnumerable<PayrollSystemIntegrationDTO> payrollSystemIntegrationDtos,
-            MonthlyCard monthlyCard, BenefitCard benefitCard, GeneralOption generalOption, ImportFrom importFrom)
+            MonthlyCard monthlyCard, BenefitCard benefitCard)
         {
             foreach (var integrationDetails in payrollSystemIntegrationDtos)
             {
@@ -1272,7 +1346,7 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                     {
                         case CrossType.AsDefined:
                             {
-                                var tempValue = GetValueOfDeductionCrossBenefit(availableCrossDeduction.Value, availableCrossDeduction.Formula, benefitValue, generalOption);
+                                var tempValue = GetValueOfDeductionCrossBenefit(availableCrossDeduction.Value, monthlyCard, availableCrossDeduction.Formula, benefitValue, generalOption);
                                 item.FinalValue -= tempValue;
                                 //availableCrossDeduction.FinalValue += tempValue;//todo: changeset no.Temp
                                 availableCrossDeduction.FinalValue += RoundUtility.PreDefinedRoundValue(availableCrossDeduction.DeductionCard.InitialRound, tempValue);
@@ -1360,7 +1434,7 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                     {
                         case CrossType.AsDefined:
                             {
-                                availableCrossDependencyValue += GetValueOfDeductionCrossBenefit(availableCrossDependency.Value, availableCrossDependency.Formula, monthlyEmployeeBenefit.InitialValue, generalOption);
+                                availableCrossDependencyValue += GetValueOfDeductionCrossBenefit(availableCrossDependency.Value, monthlyCard, availableCrossDependency.Formula, monthlyEmployeeBenefit.InitialValue, generalOption);
                                 break;
                             }
                         case CrossType.Custom:
@@ -1462,7 +1536,7 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                         {
                             case CrossType.AsDefined:
                                 {
-                                    availableCrossDependencyValue = GetValueOfDeductionCrossBenefit(availableCrossDependency.Value, availableCrossDependency.Formula, item.InitialValue, generalOption);
+                                    availableCrossDependencyValue = GetValueOfDeductionCrossBenefit(availableCrossDependency.Value, monthlyCard, availableCrossDependency.Formula, item.InitialValue, generalOption);
                                     //item.CrossDependencyInitialValue -= tempValue;
                                     //availableCrossDeduction.CrossDependencyInitialValue += tempValue;
                                     break;
@@ -1823,6 +1897,7 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
         public static double GetValueOfFormula(double value, Formula formula, MonthlyCard monthlyCard, double reductionValue, GeneralOption generalOption)
         {// reductionValue: مفيدة لحالة التقاطع حسم مع حسم بحيث ان القيم المخففة للحسم تطرح قبل الحساب للقيمة
             double finalValue;
+            var totalWorkingHours = generalOption.TakingTheTotalWorkingHoursInTheFinancialCard ? monthlyCard.TotalWorkingHours : generalOption.TotalDayHours;
             switch (formula)
             {
                 case Formula.Nothing:
@@ -1908,39 +1983,39 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                     }
                 case Formula.HoursOfPackageSalary:
                     {
-                        finalValue = value * (monthlyCard.PackageSalary - reductionValue) / generalOption.TotalMonthDays / generalOption.TotalDayHours;
+                        finalValue = value * (monthlyCard.PackageSalary - reductionValue) / generalOption.TotalMonthDays / totalWorkingHours;
                         break;
                     }
                 case Formula.HoursOfSalary:
                     {
-                        finalValue = value * (monthlyCard.Salary - reductionValue) / generalOption.TotalMonthDays / generalOption.TotalDayHours;
+                        finalValue = value * (monthlyCard.Salary - reductionValue) / generalOption.TotalMonthDays / totalWorkingHours;
                         break;
                     }
                 case Formula.HoursOfInsuranceSalary:
                     {
                         finalValue = value * (monthlyCard.InsuranceSalary - reductionValue) / generalOption.TotalMonthDays /
-                                     generalOption.TotalDayHours;
+                                     totalWorkingHours;
                         break;
                     }
                 case Formula.HoursOfBenefitSalary:
                     {
                         finalValue = value * (monthlyCard.BenefitSalary - reductionValue) / generalOption.TotalMonthDays /
-                                     generalOption.TotalDayHours;
+                                     totalWorkingHours;
                         break;
                     }
                 case Formula.HoursOfTempSalary1:
                     {
-                        finalValue = value * (monthlyCard.TempSalary1 - reductionValue) / generalOption.TotalMonthDays / generalOption.TotalDayHours;
+                        finalValue = value * (monthlyCard.TempSalary1 - reductionValue) / generalOption.TotalMonthDays / totalWorkingHours;
                         break;
                     }
                 case Formula.HoursOfTempSalary2:
                     {
-                        finalValue = value * (monthlyCard.TempSalary2 - reductionValue) / generalOption.TotalMonthDays / generalOption.TotalDayHours;
+                        finalValue = value * (monthlyCard.TempSalary2 - reductionValue) / generalOption.TotalMonthDays / totalWorkingHours;
                         break;
                     }
                 case Formula.HoursOfCategoryCeil:
                     {
-                        finalValue = value * (GeneralService.GetEmployeeCategoryMaxCeil(monthlyCard.PrimaryCard.Employee) - reductionValue) / generalOption.TotalMonthDays / generalOption.TotalDayHours;
+                        finalValue = value * (GeneralService.GetEmployeeCategoryMaxCeil(monthlyCard.PrimaryCard.Employee) - reductionValue) / generalOption.TotalMonthDays / totalWorkingHours;
                         break;
                     }
                 default:
@@ -1972,9 +2047,10 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
             return tempFinalValue;
         }
 
-        public static double GetValueOfDeductionCrossBenefit(double value, Formula formula, double initialValue, GeneralOption generalOption)
+        public static double GetValueOfDeductionCrossBenefit(double value, MonthlyCard monthlyCard, Formula formula, double initialValue, GeneralOption generalOption)
         {
             double finalValue;
+            var totalWorkingHours = generalOption.TakingTheTotalWorkingHoursInTheFinancialCard ? monthlyCard.TotalWorkingHours : generalOption.TotalDayHours;
 
             if (formula == Formula.Nothing)
             {
@@ -2000,7 +2076,7 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                      || formula == Formula.HoursOfBenefitSalary || formula == Formula.HoursOfTempSalary1 ||
                      formula == Formula.HoursOfTempSalary2)
             {
-                finalValue = value * initialValue / generalOption.TotalMonthDays / generalOption.TotalDayHours;
+                finalValue = value * initialValue / generalOption.TotalMonthDays / totalWorkingHours;
             }
             else
             {

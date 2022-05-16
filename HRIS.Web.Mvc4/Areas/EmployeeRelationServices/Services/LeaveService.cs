@@ -354,7 +354,16 @@ namespace Project.Web.Mvc4.Areas.EmployeeRelationServices.Services
         public static double GetSpentDays(DateTime startDate, DateTime endDate, bool isContinues, Employee employee)
         {
             GeneralSettings generalSetting = ServiceFactory.ORMService.All<GeneralSettings>().FirstOrDefault();
+            var publicHolidays = ServiceFactory.ORMService.All<PublicHoliday>().ToList();
+            var changableHolidays = ServiceFactory.ORMService.All<ChangeableHoliday>().ToList();
+            var fixedHolidays = ServiceFactory.ORMService.All<FixedHoliday>().ToList();
             var attendanceForm = Project.Web.Mvc4.Areas.AttendanceSystem.Services.AttendanceService.GetAttendanceForm(employee, generalSetting.AttendanceForm);
+            return GetSpentDays(attendanceForm, startDate, endDate, isContinues, publicHolidays, fixedHolidays, changableHolidays);
+        }
+
+        public static double GetSpentDays(AttendanceForm attendanceForm, DateTime startDate, DateTime endDate, bool isContinues,
+            List<PublicHoliday> publicHolidays, List<FixedHoliday> fixedHolidays, List<ChangeableHoliday> changableHolidays)
+        {
             IList<WorkshopRecurrence> recurrences = attendanceForm != null ? attendanceForm.WorkshopRecurrences.OrderBy(x => x.RecurrenceOrder).ToList() : new List<WorkshopRecurrence>();
             double spentDays = 0;
 
@@ -371,9 +380,9 @@ namespace Project.Web.Mvc4.Areas.EmployeeRelationServices.Services
                 while (DateTime.Parse(startDate.ToShortDateString()) <= DateTime.Parse(endDate.ToShortDateString()))
                 {
                     if ((attendanceForm != null ? !attendanceForm.RelyHolidaies : true) ||
-                        (!HolidayService.IsPublicHoliday(startDate) &&
-                         !HolidayService.IsChangeableHoliday(startDate) &&
-                         !HolidayService.IsFixedHoliday(startDate)))
+                        (!publicHolidays.Any(x => x.DayOfWeek == startDate.DayOfWeek) &&
+                         !fixedHolidays.Any(x => x.StartDate <= startDate && x.EndDate >= startDate) &&
+                         !changableHolidays.Any(x => x.StartDate <= startDate && x.EndDate >= startDate)))
                     {
                         if ((attendanceForm != null ? !attendanceForm.RelyHolidaies : true) && recurrences.Count == 7)
                         {

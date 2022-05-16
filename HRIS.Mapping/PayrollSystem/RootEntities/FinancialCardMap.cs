@@ -31,7 +31,10 @@ namespace HRIS.Mapping.PayrollSystem.RootEntities
             Map(x => x.ProbationPeriodPercentage);
             References(x => x.CostCenter);
             References(x => x.CurrencyType);
-
+            Map(x => x.HourlyMissionValue);
+            Map(x => x.InternalTravelMissionValue);
+            Map(x => x.ExternalTravelMissionValue);
+            Map(x => x.TotalWorkingHours);
             #endregion
         }
     }

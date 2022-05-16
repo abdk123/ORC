@@ -21,6 +21,8 @@ namespace HRIS.Domain.PayrollSystem.Configurations
 
         [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.BasicDetails, Order = 10)]
         public virtual double TotalDayHours { get; set; } // عدد ساعات الدوام في اليوم
+        [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.BasicDetails, Order = 12)]
+        public virtual bool TakingTheTotalWorkingHoursInTheFinancialCard { get; set; } // عدد ساعات الدوام في اليوم
 
         [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.BasicDetails, Order = 15)]
         public virtual double TaxThreshold { get; set; } // الحد الادنى المعفى من الضريبة
@@ -43,21 +45,6 @@ namespace HRIS.Domain.PayrollSystem.Configurations
         [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.DeductionsDetails, Order = 50, IsReference = true)]
         public virtual DeductionCard LeaveDeduction { get; set; } // حسم الاجازة  
 
-        //[UserInterfaceParameter(Order = 50, IsReference = true)]
-        //public virtual DeductionCard HealthyLeaveDeduction { get; set; } // حسم حسم الاجازة المرضية 
-
-        //[UserInterfaceParameter(Order = 55, IsReference = true)]
-        //public virtual DeductionCard UnpaidMaternityLeaveDeduction { get; set; } // حسم إجازة الامومة الاضافية بلا أجر 
-
-        //[UserInterfaceParameter(Order = 60, IsReference = true)]
-        //public virtual DeductionCard MaternityLeaveDeduction { get; set; } // حسم إجازة الامومة 
-
-        //[UserInterfaceParameter(Order = 65, IsReference = true)]
-        //public virtual DeductionCard AdministrativeLeaveDeduction { get; set; } // حسم الاجازة الادراية 
-
-        //[UserInterfaceParameter(Order = 70, IsReference = true)]
-        //public virtual DeductionCard UnpaidLeaveDeduction { get; set; } // حسم الاجازة بلا أجر 
-
         [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.DeductionsDetails, Order = 55, IsReference = true)]
         public virtual DeductionCard PenaltyDeduction { get; set; } // حسم العقوبة 
 
@@ -69,8 +56,30 @@ namespace HRIS.Domain.PayrollSystem.Configurations
 
         [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.DeductionsDetails, Order = 70, IsReference = true)]
         public virtual DeductionCard LatenessDeduction { get; set; } // حسم التأخير الصباحي 
+        [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.DeductionsDetails, Order = 70, IsReference = true)]
+        public virtual DeductionCard HolidayDeduction { get; set; } // حسم العطلة 
+        [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.DeductionsDetails, Order = 70, IsReference = true)]
+        public virtual int MinimunOfNonPaidLeaveDaysToRemoveWeeklyHolidays { get; set; } // الحد الادنى من ايام مدة اجازة البلا أجر لحذف ايام العطل الاسبوعيه 
+        [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.DeductionsDetails, Order = 70, IsReference = true)]
+        public virtual int MinimunOfNonAttendanceDaysToRemoveWeeklyHolidays { get; set; } // الحد الادنى من ايام مدة اجازة البلا أجر لحذف ايام العطل الاسبوعيه 
 
-        [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.AdvanceDetails, Order = 75)]
+        [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.MissionDetails, Order = 71)]
+        public virtual double HourlyMissionValue { get; set; }
+        [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.MissionDetails, Order = 72)]
+        public virtual double InternalTravelMissionValue { get; set; }
+        [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.MissionDetails, Order = 73)]
+        public virtual double ExternalTravelMissionValue { get; set; }
+        [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.MissionDetails, Order = 74, IsReference = true)]
+        public virtual BenefitCard HourlyMissionBenefit { get; set; }
+        [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.MissionDetails, Order = 75, IsReference = true)]
+        public virtual BenefitCard InternalTravelMissionBenefit { get; set; }
+        [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.MissionDetails, Order = 76, IsReference = true)]
+        public virtual BenefitCard ExternalTravelMissionBenefit { get; set; }
+        [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.MissionDetails, Order = 77, IsReference = true)]
+        public virtual DeductionCard HourlyMissionDeduction { get; set; }
+        [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.MissionDetails, Order = 78, IsReference = true)]
+        public virtual DeductionCard TravelMissionDeduction { get; set; }
+        [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.AdvanceDetails, Order = 79)]
         public virtual int AdvanceDeductionDaysFromEmployeeAttendance { get; set; }
         [UserInterfaceParameter(Group = PersonnelGoupesNames.ResourceGroupName + "_" + PersonnelGoupesNames.AdvanceDetails, Order = 80)]
         public virtual bool AdvanceDependesOnFromDateToDate { get; set; }
@@ -102,8 +111,7 @@ namespace HRIS.Domain.PayrollSystem.Configurations
 
         #endregion
 
-        //[UserInterfaceParameter(Order = 75)]
-        //public virtual bool AllowAuditFeature { get; set; } // الخيار الذي يسمح بميزة التدقيق في النظام من عدمها
+
 
     }
 }
