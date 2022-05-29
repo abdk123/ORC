@@ -96,12 +96,13 @@ namespace Project.Web.Mvc4.App_Start
                 ));
             bundles.Add(new ScriptBundle("~/bundles/clockPicker").Include(
                 "~/Scripts/clock-time-picker/bootstrap-clockpicker.min.js"));
-           
+
             bundles.Add(new ScriptBundle("~/bundles/Highcharts").Include(
                 "~/Scripts/Highcharts-7.1.1/highcharts.js",
                 "~/Scripts/Highcharts-7.1.1/highcharts-3d.js",
                 "~/Scripts/Highcharts-7.1.1/highcharts-more.js"
                 ));
+
             bundles.Add(new ScriptBundle("~/bundles/highChartsModules").Include(
                 "~/Scripts/Highcharts-" + highChartsVersion + "/modules/accessibility.js",
                 "~/Scripts/Highcharts-" + highChartsVersion + "/modules/annotations.js",
@@ -139,7 +140,12 @@ namespace Project.Web.Mvc4.App_Start
 
             bundles.Add(new ScriptBundle("~/bundles/json").Include(
                 "~/Scripts/json2.js"));
-
+            //orgChart tree scripts
+            bundles.Add(new ScriptBundle("~/bundles/orgChart").Include(
+                   "~/Scripts/orgChart/js/jquery.orgchart.min.js",
+                   "~/Scripts/orgChart/js/html2canvas.min.js",
+                   "~/Scripts/orgChart/js/jspdf.umd.min.js"
+            ));
             bundles.Add(new StyleBundle("~/Content/mainTheme").Include(
                 "~/Content/template/reset.css",
                 "~/Content/template/themes.css",
@@ -172,7 +178,7 @@ namespace Project.Web.Mvc4.App_Start
             bundles.Add(new StyleBundle("~/Content/kendo").Include(
                 "~/Content/kendo-" + KendoVersion + "/kendo.common.min.css",
                 "~/Content/kendo-" + KendoVersion + "/kendo.flat.min.css"));
-            
+
             bundles.Add(new StyleBundle("~/Content/kendo-rtl").Include(
                 "~/Content/kendo-" + KendoVersion + "/kendo.rtl.min.css"));
 
@@ -180,6 +186,14 @@ namespace Project.Web.Mvc4.App_Start
                 "~/Scripts/bootstrap/css/bootstrap.min.css"));
             bundles.Add(new StyleBundle("~/Content/clockPicker").Include(
                 "~/Scripts/clock-time-picker/bootstrap-clockpicker.min.css"));
+            //orgChart tree css styles
+            bundles.Add(new StyleBundle("~/Content/orgChart").Include(
+                "~/Scripts/orgChart/css/jquery.orgchart.min.css"));
+            bundles.Add(new ScriptBundle("~/bundles/orgChart").Include(
+                   "~/Scripts/orgChart/js/jquery.orgchart.min.js",
+                   "~/Scripts/orgChart/js/html2canvas.min.js",
+                   "~/Scripts/orgChart/js/jspdf.umd.min.js"
+            ));
             // Clear all items from the default ignore list to allow minified CSS and JavaScript files to be included in debug mode
             bundles.IgnoreList.Clear();
 

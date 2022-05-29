@@ -76,6 +76,14 @@ namespace Project.Web.Mvc4.Areas.OrganizationChart.Models
                 SecurityId = "OrganizationChartDashboard"
             });
 
+            module.Dashboards.Add(new Dashboard()
+            {
+                Title = GlobalResource.OrganizationChartTree,
+                Controller = "OrganizationChart/Dashboard",
+                Action = "OrgChartDashboardTree",
+                DashboardId = "OrganizationChartTree",
+                SecurityId = "OrganizationChartTreeDashboard"
+            });
             //module.Aggregates.Add(new Aggregate()
             //{
             //    Title = OrganizationChartLocalizationHelper.GetResource(OrganizationChartLocalizationHelper.NodesCaption),

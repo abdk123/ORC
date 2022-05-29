@@ -33,12 +33,12 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
-    
+
     <title>@ViewBag.Title</title>
 
-    <link rel="icon" type="image/png" href="@temp" /> 
-    
-    
+    <link rel="icon" type="image/png" href="@temp" />
+
+
     @* First include bundle Javascripts *@
     @Scripts.Render("~/bundles/underscore")
     @Scripts.Render("~/bundles/modernizr")
@@ -52,30 +52,31 @@
     @Scripts.Render("~/bundles/json")
     @Scripts.Render("~/bundles/bootstrap")
     @Scripts.Render("~/bundles/clockPicker")
+    @Scripts.Render("~/bundles/orgChart")
     @* Second include custom CSS *@
     @{
         if (CurrentLocale.Language == Locale.Ltr)
         {
-        <link type="text/css" rel="stylesheet" href="~/Content/template/bootstrap.css" />
-        <link type="text/css" rel="stylesheet" href="~/Content/template/layout.css" />
-        <link type="text/css" rel="stylesheet" href="~/Content/template/styles.css" />
-        <link type="text/css" rel="stylesheet" href="~/Content/template/common.css" />
-        <script src="~/Scripts/mainTheme/jquery.tipsy.js"></script>
+            <link type="text/css" rel="stylesheet" href="~/Content/template/bootstrap.css" />
+            <link type="text/css" rel="stylesheet" href="~/Content/template/layout.css" />
+            <link type="text/css" rel="stylesheet" href="~/Content/template/styles.css" />
+            <link type="text/css" rel="stylesheet" href="~/Content/template/common.css" />
+            <script src="~/Scripts/mainTheme/jquery.tipsy.js"></script>
         }
         else if (CurrentLocale.Language == Locale.Rtl)
         {
-        <link type="text/css" rel="stylesheet" href="~/Content/template/bootstrap-ar.css" />
-        <link type="text/css" rel="stylesheet" href="~/Content/template/layout-ar.css" />
-        <link type="text/css" rel="stylesheet" href="~/Content/template/styles-ar.css" />
-        <link type="text/css" rel="stylesheet" href="~/Content/template/common-ar.css" />
-        @Styles.Render("~/Content/kendo-rtl")
-        <script src="~/Scripts/mainTheme/jquery.tipsy-ar.js"></script>
+            <link type="text/css" rel="stylesheet" href="~/Content/template/bootstrap-ar.css" />
+            <link type="text/css" rel="stylesheet" href="~/Content/template/layout-ar.css" />
+            <link type="text/css" rel="stylesheet" href="~/Content/template/styles-ar.css" />
+            <link type="text/css" rel="stylesheet" href="~/Content/template/common-ar.css" />
+            @Styles.Render("~/Content/kendo-rtl")
+            <script src="~/Scripts/mainTheme/jquery.tipsy-ar.js"></script>
         }
-            
+
     }
     <script>
         window.applicationpath = "@Url.Content("~")";
-        
+
         if ("@TempData["ChangeLanguage"]" == "True") {
             $(document).ready(function () {
                 window.requestInformation = JSON.parse(@Html.Raw(Json.Encode(TempData["requestInformation"])));
@@ -97,9 +98,10 @@
     @* Third include bundle CSS *@
     @Styles.Render("~/Content/kendo")
     @Styles.Render("~/Content/mainTheme")
+    @Styles.Render("~/Content/orgChart")
     @Styles.Render("~/Content/bootstrap")
     @Styles.Render("~/Content/clockPicker")
-    
+
     @* <link href="~/Content/template/maestro-style/theme-default.css" rel="stylesheet" /> *@
     @Html.Partial("ThemePartial")
 </head>

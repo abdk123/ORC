@@ -454,7 +454,8 @@ namespace Project.Web.Mvc4.Helpers
         public const string Last = "Last";
         public const string Refresh = "Refresh";
         public const string PendingAdvanceRequest = "PendingAdvanceRequest";
-        
+        public const string OrganizationChartTree = "OrganizationChartTree";
+
         public static string GetResource(string key)
         {
             var result = ServiceFactory.LocalizationService.GetResource(ResourceGroupName + "_" + key);
@@ -2005,6 +2006,10 @@ namespace Project.Web.Mvc4.Helpers
         {
             get { return LocalizationHelper.GetResource(LocalizationHelper.PendingAdvanceRequest); }
         }
-        
+
+        public static string OrganizationChartTree
+        {
+            get { return LocalizationHelper.GetResource(LocalizationHelper.Dashboard); }
+        }
     }
 }

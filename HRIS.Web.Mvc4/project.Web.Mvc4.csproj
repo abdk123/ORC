@@ -3036,6 +3036,7 @@
     <Content Include="Areas\EmployeeRelationServices\Views\Shared\EmployeeDisciplinary.cshtml" />
     <Content Include="Areas\EmployeeRelationServices\Views\Shared\EmployeeCustodiesRequest.cshtml" />
     <Content Include="App_Data\Settings.xml.aes" />
+    <Content Include="Areas\OrganizationChart\Views\Shared\OrgChartDashboardTree.cshtml" />
     <None Include="Properties\PublishProfiles\15-9-2015.pubxml" />
     <None Include="Properties\PublishProfiles\18-1-2016.pubxml" />
     <None Include="Properties\PublishProfiles\30-6-2021.pubxml" />
@@ -4036,6 +4037,12 @@
     <Content Include="Scripts\kendo-2014.2.716\kendo.web.min.js" />
     <Content Include="Scripts\kendo-2014.2.716\kendo.window.min.js" />
     <Content Include="Scripts\MainGrid.js" />
+    <Content Include="Scripts\orgChart\css\jquery.orgchart.css" />
+    <Content Include="Scripts\orgChart\css\jquery.orgchart.min.css" />
+    <Content Include="Scripts\orgChart\js\html2canvas.min.js" />
+    <Content Include="Scripts\orgChart\js\jquery.orgchart.js" />
+    <Content Include="Scripts\orgChart\js\jquery.orgchart.min.js" />
+    <Content Include="Scripts\orgChart\js\jspdf.umd.min.js" />
     <Content Include="Scripts\ReportBuilder.js" />
     <Content Include="Scripts\sidebar-menu.js" />
     <Content Include="Scripts\signalR-2.2.0.js" />
