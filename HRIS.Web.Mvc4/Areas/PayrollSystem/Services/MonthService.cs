@@ -9,6 +9,8 @@ using HRIS.Domain.PayrollSystem.Enums;
 using HRIS.Domain.PayrollSystem.RootEntities;
 using HRIS.Domain.Personnel.Enums;
 using HRIS.Domain.Personnel.RootEntities;
+using HRIS.Validation.MessageKeys;
+using Project.Web.Mvc4.Areas.EmployeeRelationServices.Services;
 using Souccar.Core.Utilities;
 using Souccar.Infrastructure.Core;
 using Souccar.Infrastructure.Extenstions;
@@ -120,7 +122,7 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
             #region Primary Info
             var currentMonthStart = new DateTime(month.FromDate.Year, month.FromDate.Month, month.FromDate.Day);
             var currentMonthEnd = new DateTime(month.ToDate.Year, month.ToDate.Month, month.ToDate.Day);
-
+            var employeeForm = DictionaryEmployeeAttendanceForm[primaryCard.Employee];
             var hireDate = primaryCard.StartWorkingDate;
             var abruptionDate = primaryCard.EndWorkingDate;
             var daysConflictWithHireDate =
@@ -354,7 +356,7 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                     AddBenefit(new List<PayrollSystemIntegrationDTO>() { externalMission }, monthlyCard, GeneralOptionObject.ExternalTravelMissionBenefit);
                 }
                 var overtime = PayrollIntegrationService.ImportFromAttendance(PayrollIntegrationService.AttendanceType.Overtime,
-                    primaryCard.Employee, month.FromDate.Date, month.ToDate.Date, false, GeneralOptionObject, PublicHolidays, DictionaryEmployeeAttendanceForm);
+                    primaryCard.Employee, month.FromDate.Date, month.ToDate.Date, false, GeneralOptionObject, PublicHolidays, employeeForm);
                 AddBenefit(overtime, monthlyCard, GeneralOptionObject.OvertimeBenefit);
             }
             #endregion
@@ -492,7 +494,7 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
             if (month.ImportFromEmployeeRelation)
             {
                 var leaves = PayrollIntegrationService.GetLeaves(primaryCard.Employee, GeneralOptionObject,
-                    PublicHolidays, FixedHolidays, ChangeableHolidays, DictionaryEmployeeAttendanceForm,
+                    PublicHolidays, FixedHolidays, ChangeableHolidays, employeeForm,
                     false, month.FromDate, month.ToDate);
                 if (leaves.Count() != 0)
                 {
@@ -515,29 +517,29 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
                 }
                 var dailyMission = PayrollIntegrationService.GetDailyMissionsDeduction(primaryCard.Employee,
                     TravelMissions.Where(x => x.Employee == primaryCard.Employee).ToList(), GeneralOptionObject,
-                    PublicHolidays, FixedHolidays, ChangeableHolidays, DictionaryEmployeeAttendanceForm, month.FromDate, month.ToDate);
+                    PublicHolidays, FixedHolidays, ChangeableHolidays, employeeForm, month.FromDate, month.ToDate);
                 if (dailyMission != null)
                 {
                     AddDeduction(new List<PayrollSystemIntegrationDTO>() { dailyMission }, monthlyCard, GeneralOptionObject.TravelMissionDeduction);
                 }
                 var overtimeOrdersEmployee = OvertimeOrders.Where(x => x.Employee?.Id == primaryCard.Employee?.Id).ToList();
                 var holiday = PayrollIntegrationService.GetHolidaysDeduction(primaryCard.Employee, GeneralOptionObject,
-                    PublicHolidays, FixedHolidays, ChangeableHolidays, DictionaryEmployeeAttendanceForm,
+                    PublicHolidays, FixedHolidays, ChangeableHolidays, employeeForm,
                     overtimeOrdersEmployee, month.FromDate, month.ToDate);
                 if (holiday != null)
                 {
                     AddDeduction(new List<PayrollSystemIntegrationDTO>() { holiday }, monthlyCard, GeneralOptionObject.HolidayDeduction);
                 }
                 var absences = PayrollIntegrationService.ImportFromAttendance(PayrollIntegrationService.AttendanceType.Absence,
-                    primaryCard.Employee, month.FromDate.Date, month.ToDate.Date, false, GeneralOptionObject, PublicHolidays, DictionaryEmployeeAttendanceForm);
+                    primaryCard.Employee, month.FromDate.Date, month.ToDate.Date, false, GeneralOptionObject, PublicHolidays, employeeForm);
                 AddDeduction(absences, monthlyCard, GeneralOptionObject.AbsenceDaysDeduction);
 
                 var nonAttendance = PayrollIntegrationService.ImportFromAttendance(PayrollIntegrationService.AttendanceType.NonAttendance,
-                    primaryCard.Employee, month.FromDate.Date, month.ToDate.Date, false, GeneralOptionObject, PublicHolidays, DictionaryEmployeeAttendanceForm);
+                    primaryCard.Employee, month.FromDate.Date, month.ToDate.Date, false, GeneralOptionObject, PublicHolidays, employeeForm);
                 AddDeduction(nonAttendance, monthlyCard, GeneralOptionObject.NonAttendanceDeduction);
 
                 var lateness = PayrollIntegrationService.ImportFromAttendance(PayrollIntegrationService.AttendanceType.Lateness,
-                    primaryCard.Employee, month.FromDate.Date, month.ToDate.Date, false, GeneralOptionObject, PublicHolidays, DictionaryEmployeeAttendanceForm);
+                    primaryCard.Employee, month.FromDate.Date, month.ToDate.Date, false, GeneralOptionObject, PublicHolidays, employeeForm);
                 AddDeduction(lateness, monthlyCard, GeneralOptionObject.LatenessDeduction);
 
             }
