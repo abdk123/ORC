@@ -1897,7 +1897,7 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
         public static double GetValueOfFormula(double value, Formula formula, MonthlyCard monthlyCard, double reductionValue, GeneralOption generalOption)
         {// reductionValue: مفيدة لحالة التقاطع حسم مع حسم بحيث ان القيم المخففة للحسم تطرح قبل الحساب للقيمة
             double finalValue;
-            var totalWorkingHours = generalOption.TakingTheTotalWorkingHoursInTheFinancialCard ? monthlyCard.TotalWorkingHours : generalOption.TotalDayHours;
+            var totalWorkingHours = generalOption.TakingTheTotalWorkingHoursInTheFinancialCard && monthlyCard.TotalWorkingHours > 0 ? monthlyCard.TotalWorkingHours : generalOption.TotalDayHours;
             switch (formula)
             {
                 case Formula.Nothing:
@@ -2050,7 +2050,7 @@ namespace Project.Web.Mvc4.Areas.PayrollSystem.Services
         public static double GetValueOfDeductionCrossBenefit(double value, MonthlyCard monthlyCard, Formula formula, double initialValue, GeneralOption generalOption)
         {
             double finalValue;
-            var totalWorkingHours = generalOption.TakingTheTotalWorkingHoursInTheFinancialCard ? monthlyCard.TotalWorkingHours : generalOption.TotalDayHours;
+            var totalWorkingHours = generalOption.TakingTheTotalWorkingHoursInTheFinancialCard && monthlyCard.TotalWorkingHours > 0 ? monthlyCard.TotalWorkingHours : generalOption.TotalDayHours;
 
             if (formula == Formula.Nothing)
             {
