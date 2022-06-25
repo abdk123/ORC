@@ -95,7 +95,7 @@ namespace HRIS.Domain.PayrollSystem.RootEntities
 
 
         [UserInterfaceParameter(Order = 110)]
-        public virtual int TotalWorkingHours { get; set; }
+        public virtual double TotalWorkingHours { get; set; }
         [UserInterfaceParameter(Order = 120)]
         public virtual double HourlyMissionValue { get; set; }
         [UserInterfaceParameter(Order = 130)]

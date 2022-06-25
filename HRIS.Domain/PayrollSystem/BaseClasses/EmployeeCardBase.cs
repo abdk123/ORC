@@ -33,7 +33,7 @@ namespace HRIS.Domain.PayrollSystem.BaseClasses
 
 
         [UserInterfaceParameter(Order = 110, IsHidden = true)]
-        public virtual int TotalWorkingHours { get; set; }
+        public virtual double TotalWorkingHours { get; set; }
         [UserInterfaceParameter(Order = 120, IsHidden = true)]
         public virtual double HourlyMissionValue { get; set; }
         [UserInterfaceParameter(Order = 130, IsHidden = true)]
